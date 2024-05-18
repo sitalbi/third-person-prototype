@@ -219,7 +219,7 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 		if (!IsPlayingMontage()) {
 			if (animInstance && AttackMontage) {
 				animInstance->Montage_Play(AttackMontage, 1.0f);
-				animInstance->Montage_JumpToSection("Attack");
+				animInstance->Montage_JumpToSection("Attack1");
 			}
 		}
 		
@@ -234,6 +234,8 @@ bool AThirdPersonCharacter::IsPlayingMontage()
 
 void AThirdPersonCharacter::Equip()
 {
+	// print is equiped
+	UE_LOG(LogTemp, Warning, TEXT("IsEquipped: %d"), IsEquipped);
 	if (IsEquipped)
 	{
 		DrawComponent->SetVisibility(true);

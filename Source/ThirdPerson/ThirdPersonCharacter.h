@@ -83,8 +83,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	float sprintSpeed = 800.f;
 
+	UFUNCTION()
+	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+
 	void SetSpeed(float speed);
 	void SetDefaultSpeed();
+
+	void SetCanAttack();
 
 	void Equip();
 	void AttackHitDetection();
@@ -112,6 +118,10 @@ protected:
 	
 	UStaticMeshComponent* DrawComponent;
 	UStaticMeshComponent* SheathComponent;
+
+	unsigned int AttackCount = 0;
+
+	bool canAttack = true;
 
 
 protected:

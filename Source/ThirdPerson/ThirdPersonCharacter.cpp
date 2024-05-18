@@ -85,7 +85,7 @@ void AThirdPersonCharacter::BeginPlay()
 	Equip();
 	DrawComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	DrawComponent->SetCollisionResponseToChannel(ECC_Pawn, ECollisionResponse::ECR_Block);
-
+	
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -216,10 +216,17 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 			Equip();
 		}
 		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
-		if (!IsPlayingMontage()) {
+		if (canAttack) {
 			if (animInstance && AttackMontage) {
+				canAttack = false;
 				animInstance->Montage_Play(AttackMontage, 1.0f);
-				animInstance->Montage_JumpToSection("Attack1");
+				FOnMontageEnded EndDelegate;
+				EndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
+				animInstance->Montage_SetEndDelegate(EndDelegate, AttackMontage);
+
+				FName section = FName(*FString::Printf(TEXT("Attack%d"), AttackCount+1));
+				animInstance->Montage_JumpToSection(section);
+				AttackCount = (AttackCount+1)%animInstance->GetCurrentActiveMontage()->GetNumSections();
 			}
 		}
 		
@@ -285,13 +292,31 @@ void AThirdPersonCharacter::AttackHitDetection()
 }
 
 
+void AThirdPersonCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (bInterrupted)
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("Attack Montage Interrupted"));
+	}
+	else
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("Attack Montage Ended"));
+		SetCanAttack();
+		AttackCount = 0;
+	}
+}
+
 void AThirdPersonCharacter::SetSpeed(float speed)
 {
 	GetCharacterMovement()->MaxWalkSpeed = speed;
 }
 
 void AThirdPersonCharacter::SetDefaultSpeed()
-
 {
 	GetCharacterMovement()->MaxWalkSpeed = defaultSpeed;
+}
+
+void AThirdPersonCharacter::SetCanAttack()
+{
+	canAttack = true;
 }

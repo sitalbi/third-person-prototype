@@ -57,6 +57,11 @@ class AThirdPersonCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* AttackAction;
 
+	/** Heavy Attack Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* HeavyAttackAction;
+
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
 	bool IsEquipped = false;
 
@@ -68,6 +73,9 @@ class AThirdPersonCharacter : public ACharacter
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* JumpAttackMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* HeavyAttackMontage;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
 	UStaticMesh* WeaponMesh;
@@ -116,9 +124,12 @@ protected:
 
 	/** Called for attacking input */
 	void Attack(const FInputActionValue& Value);
+	void HeavyAttack(const FInputActionValue& Value);
 
 	/** Check for animation playing */
 	bool IsPlayingMontage();
+
+	void ResetAttack();
 
 	
 	UStaticMeshComponent* DrawComponent;

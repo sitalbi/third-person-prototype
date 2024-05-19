@@ -115,6 +115,10 @@ void AThirdPersonCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 
 		// Attacking
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &AThirdPersonCharacter::Attack);
+
+		// Heavy Attack
+		EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Started, this, &AThirdPersonCharacter::HeavyAttack);
+		EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Completed, this, &AThirdPersonCharacter::HeavyAttack);
 	}
 	else
 	{
@@ -155,7 +159,7 @@ void AThirdPersonCharacter::Sprint(const FInputActionValue& Value)
 
 	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 
-	if (bSprint && !GetCharacterMovement()->IsFalling())
+	if (bSprint && !GetCharacterMovement()->IsFalling() && !IsPlayingMontage())
 	{
 		SetSpeed(sprintSpeed);
 	}
@@ -240,6 +244,48 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 	}
 }
 
+void AThirdPersonCharacter::HeavyAttack(const FInputActionValue& Value) {
+	// input is a boolean
+	bool bHeavyAttack = Value.Get<bool>();
+
+	UE_LOG(LogTemp, Warning, TEXT("Heavy Attack: %d"), bHeavyAttack);
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (bHeavyAttack)
+	{
+		if (!IsEquipped) {
+			IsEquipped = true;
+			Equip();
+		}
+		if (canAttack) {
+			canAttack = false;
+			AnimInstance->Montage_Play(HeavyAttackMontage, 1.0f);
+		}
+	}
+	else {
+		if (AnimInstance->Montage_IsPlaying(HeavyAttackMontage)) {
+			FString CurrentSectionName;
+			FAnimMontageInstance* MontageInstance = AnimInstance->GetActiveInstanceForMontage(HeavyAttackMontage);
+			if (MontageInstance)
+			{
+				CurrentSectionName = MontageInstance->GetCurrentSection().ToString();
+			}
+			UE_LOG(LogTemp, Warning, TEXT("Current Section: %s"), *CurrentSectionName);
+			if (CurrentSectionName.Equals("Mid")) {
+				AnimInstance->Montage_Play(HeavyAttackMontage, 1.0f);
+				FOnMontageEnded EndDelegate;
+				EndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
+				AnimInstance->Montage_SetEndDelegate(EndDelegate, HeavyAttackMontage);
+				AnimInstance->Montage_JumpToSection("End");
+			}
+			else {
+				AnimInstance->Montage_Stop(0.5f, HeavyAttackMontage);
+				ResetAttack();
+			}
+		}
+	}
+}
+
 bool AThirdPersonCharacter::IsPlayingMontage()
 {
 	UAnimInstance * animInstance = GetMesh()->GetAnimInstance();
@@ -311,6 +357,12 @@ void AThirdPersonCharacter::Landed(const FHitResult& Hit)
 }
 
 
+void AThirdPersonCharacter::ResetAttack()
+{
+	canAttack = true;
+	AttackCount = 0;
+}
+
 void AThirdPersonCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	if (bInterrupted)
@@ -320,8 +372,7 @@ void AThirdPersonCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bIn
 	else
 	{
 		UE_LOG(LogTemplateCharacter, Warning, TEXT("Attack Montage Ended"));
-		SetCanAttack();
-		AttackCount = 0;
+		ResetAttack();
 	}
 }
 
@@ -335,7 +386,3 @@ void AThirdPersonCharacter::SetDefaultSpeed()
 	GetCharacterMovement()->MaxWalkSpeed = defaultSpeed;
 }
 
-void AThirdPersonCharacter::SetCanAttack()
-{
-	canAttack = true;
-}

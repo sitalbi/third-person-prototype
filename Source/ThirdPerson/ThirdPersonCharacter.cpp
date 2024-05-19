@@ -217,16 +217,23 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 		}
 		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 		if (canAttack) {
-			if (animInstance && AttackMontage) {
-				canAttack = false;
-				animInstance->Montage_Play(AttackMontage, 1.0f);
-				FOnMontageEnded EndDelegate;
-				EndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
-				animInstance->Montage_SetEndDelegate(EndDelegate, AttackMontage);
+			if (animInstance) {
+				if (!GetMovementComponent()->IsFalling()) {
+					canAttack = false;
+					animInstance->Montage_Play(AttackMontage, 1.0f);
+					FOnMontageEnded EndDelegate;
+					EndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
+					animInstance->Montage_SetEndDelegate(EndDelegate, AttackMontage);
 
-				FName section = FName(*FString::Printf(TEXT("Attack%d"), AttackCount+1));
-				animInstance->Montage_JumpToSection(section);
-				AttackCount = (AttackCount+1)%animInstance->GetCurrentActiveMontage()->GetNumSections();
+					FName section = FName(*FString::Printf(TEXT("Attack%d"), AttackCount + 1));
+					animInstance->Montage_JumpToSection(section);
+					AttackCount = (AttackCount + 1) % animInstance->GetCurrentActiveMontage()->GetNumSections();
+				} 
+				else {
+					canAttack = false;
+					animInstance->Montage_Play(JumpAttackMontage, 1.0f);
+				}
+				
 			}
 		}
 		
@@ -289,6 +296,18 @@ void AThirdPersonCharacter::AttackHitDetection()
 
 	// Debug
 	DrawDebugCapsule(GetWorld(), (StartLocation + EndLocation) / 2, HalfHeight, Radius, Rotation, bHit ? FColor::Green : FColor::Red, false, 1.0f, 0, 1.0f);
+}
+
+void AThirdPersonCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+	
+	// if not can attack means that the character is in the middle of an attack
+	if (!canAttack) {
+		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+		animInstance->Montage_Play(JumpAttackMontage, 1.0f);
+		animInstance->Montage_JumpToSection("Land");
+	}
 }
 
 

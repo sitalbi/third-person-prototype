@@ -66,6 +66,9 @@ class AThirdPersonCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* AttackMontage;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* JumpAttackMontage;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
 	UStaticMesh* WeaponMesh;
 
@@ -94,6 +97,8 @@ public:
 
 	void Equip();
 	void AttackHitDetection();
+
+	virtual void Landed(const FHitResult& Hit) override;
 
 protected:
 

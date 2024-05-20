@@ -135,9 +135,14 @@ void AThirdPersonCharacter::Move(const FInputActionValue& Value)
 
 	if (Controller != nullptr)
 	{
+		// if the character is attacking, it can't move
+		if (!canAttack) {
+			return;
+		}
+		
+
 		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
+		const FRotator YawRotation(0, Controller->GetControlRotation().Yaw, 0);
 
 		// get forward vector
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
@@ -221,6 +226,15 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 		}
 		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 		if (canAttack) {
+			// make the player face the direction of the input
+			if (Controller != nullptr)
+			{
+				// Get the movement input vector
+				FVector MoveDirection = GetLastMovementInputVector();
+				FRotator NewRotation = MoveDirection.Rotation();
+				NewRotation.Pitch = 0; // Ensure we only rotate around the Yaw axis
+				SetActorRotation(NewRotation);
+			}
 			if (animInstance) {
 				if (!GetMovementComponent()->IsFalling()) {
 					canAttack = false;
@@ -384,5 +398,10 @@ void AThirdPersonCharacter::SetSpeed(float speed)
 void AThirdPersonCharacter::SetDefaultSpeed()
 {
 	GetCharacterMovement()->MaxWalkSpeed = defaultSpeed;
+}
+
+void AThirdPersonCharacter::SetCanAttack()
+{
+	this->canAttack = true;
 }
 

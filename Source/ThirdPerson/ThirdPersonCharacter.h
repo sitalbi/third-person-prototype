@@ -100,7 +100,6 @@ public:
 
 	void SetSpeed(float speed);
 	void SetDefaultSpeed();
-
 	void SetCanAttack();
 
 	void Equip();

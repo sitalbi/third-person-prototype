@@ -4,16 +4,26 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Enemy/MeleeHitInterface.h"
 #include "EnemyCharacter.generated.h"
 
 UCLASS()
-class THIRDPERSON_API AEnemyCharacter : public ACharacter
+class THIRDPERSON_API AEnemyCharacter : public ACharacter, public IMeleeHitInterface
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this character's properties
 	AEnemyCharacter();
+	
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
+protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+	
+private:
 
 	UPROPERTY(EditAnywhere, Category = "Controller")
 	FName Name;
@@ -27,13 +37,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	float Damage;
 
-
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
+public:
+	// override MeleeHitInterface
+	virtual void OnMeleeHit(FHitResult HitResult) override;
 };

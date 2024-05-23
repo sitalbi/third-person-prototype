@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Enemy/MeleeHitInterface.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -349,7 +350,11 @@ void AThirdPersonCharacter::AttackHitDetection()
 
 	if (bHit) {
 		AActor* HitActor = HitResult.GetActor();
-		HitActor->Destroy();
+		
+		IMeleeHitInterface* MeleeHitActor = Cast<IMeleeHitInterface>(HitActor);
+		if (MeleeHitActor) {
+			MeleeHitActor->OnMeleeHit(HitResult);
+		}
 	}
 
 	// Debug

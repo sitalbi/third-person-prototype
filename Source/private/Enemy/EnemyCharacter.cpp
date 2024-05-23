@@ -25,3 +25,9 @@ void AEnemyCharacter::Tick(float DeltaTime)
 
 }
 
+
+void AEnemyCharacter::OnMeleeHit(FHitResult HitResult)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Melee Hit"));
+	// TODO: apply damage (stats, animation, etc)
+}

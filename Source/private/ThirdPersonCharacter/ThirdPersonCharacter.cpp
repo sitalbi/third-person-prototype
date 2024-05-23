@@ -1,6 +1,6 @@
  // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "ThirdPersonCharacter.h"
+#include "ThirdPersonCharacter/ThirdPersonCharacter.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -131,15 +131,13 @@ void AThirdPersonCharacter::Move(const FInputActionValue& Value)
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
-
-
 	if (Controller != nullptr)
 	{
-		// if the character is attacking, it can't move
-		if (!canAttack) {
+		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+		// if the character is attacking or drawing weapon, he can't move
+		if (!canAttack || animInstance->Montage_IsPlaying(DrawMontage)) {
 			return;
 		}
-		
 
 		// find out which way is forward
 		const FRotator YawRotation(0, Controller->GetControlRotation().Yaw, 0);

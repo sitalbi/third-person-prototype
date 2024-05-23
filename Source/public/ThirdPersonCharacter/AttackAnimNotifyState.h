@@ -2,23 +2,22 @@
 
 #pragma once
 
-#include "ThirdPersonCharacter.h"
+#include "ThirdPersonCharacter/ThirdPersonCharacter.h"
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotifyState.h"
-#include "SpeedModifierAnimNotifyState.generated.h"
+#include "AttackAnimNotifyState.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class THIRDPERSON_API USpeedModifierAnimNotifyState : public UAnimNotifyState
+class THIRDPERSON_API UAttackAnimNotifyState : public UAnimNotifyState
 {
 	GENERATED_BODY()
-	
+
 	public:
 		virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration) override;
+		virtual void NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime) override;
 		virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) override;
-
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SpeedModifier")
-		float modifiedSpeed = 10.0f;
+	
 };

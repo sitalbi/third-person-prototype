@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "ThirdPersonCharacter.h"
+#include "ThirdPersonCharacter/ThirdPersonCharacter.h"
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotify.h"
 #include "CanAttackAnimNotify.generated.h"

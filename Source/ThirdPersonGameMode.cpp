@@ -1,7 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "ThirdPersonGameMode.h"
-#include "ThirdPersonCharacter.h"
+#include "ThirdPersonCharacter/ThirdPersonCharacter.h"
 #include "UObject/ConstructorHelpers.h"
 
 AThirdPersonGameMode::AThirdPersonGameMode()

@@ -15,6 +15,9 @@ class THIRDPERSON_API ASimpleEnemyCharacter : public AEnemyCharacter
 	GENERATED_BODY()
 	
 
-	public:
+public:
 		ASimpleEnemyCharacter();
+
+		virtual void OnMeleeHit(FHitResult HitResult) override;
+
 };

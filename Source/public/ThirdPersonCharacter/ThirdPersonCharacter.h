@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include <Components/BoxComponent.h>
-#include "GameFramework/Character.h"
+#include <GameFramework/Character.h>
 #include "Logging/LogMacros.h"
 #include "ThirdPersonCharacter.generated.h"
 
@@ -105,7 +105,7 @@ public:
 	void Equip();
 	void AttackHitDetection();
 
-	virtual void Landed(const FHitResult& Hit) override;
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
 
 protected:
 
@@ -145,6 +145,7 @@ protected:
 	
 	// To add mapping context
 	virtual void BeginPlay();
+
 
 public:
 	/** Returns CameraBoom subobject **/

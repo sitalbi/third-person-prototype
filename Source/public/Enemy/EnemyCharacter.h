@@ -19,23 +19,29 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* HitMontage;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	
+	int HitCount = 0;
+
 	
 private:
 
 	UPROPERTY(EditAnywhere, Category = "Controller")
 	FName Name;
 
-	UPROPERTY(EditAnywhere, Category = "Combat")
+	UPROPERTY(VisibleAnywhere, Category = "Combat")
 	float Health;
 
-	UPROPERTY(VisibleAnywhere, Category = "Combat")
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
 	float MaxHealth;
 
 	UPROPERTY(EditAnywhere, Category = "Combat")
-	float Damage;
+	float AttackDamage;
 
 public:
 	// override MeleeHitInterface

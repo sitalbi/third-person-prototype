@@ -15,7 +15,9 @@ AEnemyCharacter::AEnemyCharacter()
 void AEnemyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	isHit = false;
+	HitCount = 0;
 }
 
 // Called every frame
@@ -29,5 +31,5 @@ void AEnemyCharacter::Tick(float DeltaTime)
 void AEnemyCharacter::OnMeleeHit(FHitResult HitResult)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Melee Hit"));
-	// TODO: apply damage (stats, animation, etc)
+
 }

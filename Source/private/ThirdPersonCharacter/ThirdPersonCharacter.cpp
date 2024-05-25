@@ -85,7 +85,6 @@ void AThirdPersonCharacter::BeginPlay()
 	}
 	Equip();
 	DrawComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-	DrawComponent->SetCollisionResponseToChannel(ECC_Pawn, ECollisionResponse::ECR_Block);
 	
 }
 
@@ -223,42 +222,44 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 			IsEquipped = true;
 			Equip();
 		}
+
 		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
-		if (canAttack) {
+		if (canAttack && animInstance) {  // Ensure animInstance is valid
 			// make the player face the direction of the input
 			if (Controller != nullptr)
 			{
 				// Get the movement input vector
 				FVector MoveDirection = GetLastMovementInputVector();
+				if (MoveDirection.Size() < 0.1) {
+					MoveDirection = GetActorForwardVector();
+				}
 				FRotator NewRotation = MoveDirection.Rotation();
 				NewRotation.Pitch = 0; // Ensure we only rotate around the Yaw axis
 				SetActorRotation(NewRotation);
 			}
-			if (animInstance) {
-				if (!GetMovementComponent()->IsFalling()) {
-					canAttack = false;
-					animInstance->Montage_Play(AttackMontage, 1.0f);
-					FOnMontageEnded EndDelegate;
-					EndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
-					animInstance->Montage_SetEndDelegate(EndDelegate, AttackMontage);
 
-					FName section = FName(*FString::Printf(TEXT("Attack%d"), AttackCount + 1));
-					animInstance->Montage_JumpToSection(section);
-					AttackCount = (AttackCount + 1) % animInstance->GetCurrentActiveMontage()->GetNumSections();
-				} 
-				else {
-					canAttack = false;
-					animInstance->Montage_Play(JumpAttackMontage, 1.0f);
-				}
-				
+			if (!GetMovementComponent()->IsFalling()) {
+				canAttack = false;
+				animInstance->Montage_Play(AttackMontage, 1.0f);
+
+				FOnMontageEnded EndDelegate;
+				EndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
+				animInstance->Montage_SetEndDelegate(EndDelegate, AttackMontage);
+
+				FName section = FName(*FString::Printf(TEXT("Attack%d"), AttackCount + 1));
+				animInstance->Montage_JumpToSection(section);
+				AttackCount = (AttackCount + 1) % animInstance->GetCurrentActiveMontage()->GetNumSections();
+			}
+			else {
+				canAttack = false;
+				animInstance->Montage_Play(JumpAttackMontage, 1.0f);
 			}
 		}
-		
 	}
 }
 
+
 void AThirdPersonCharacter::HeavyAttack(const FInputActionValue& Value) {
-	// input is a boolean
 	bool bHeavyAttack = Value.Get<bool>();
 
 	UE_LOG(LogTemp, Warning, TEXT("Heavy Attack: %d"), bHeavyAttack);
@@ -285,6 +286,7 @@ void AThirdPersonCharacter::HeavyAttack(const FInputActionValue& Value) {
 			}
 			UE_LOG(LogTemp, Warning, TEXT("Current Section: %s"), *CurrentSectionName);
 			if (CurrentSectionName.Equals("Mid")) {
+				
 				AnimInstance->Montage_Play(HeavyAttackMontage, 1.0f);
 				FOnMontageEnded EndDelegate;
 				EndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
@@ -307,8 +309,6 @@ bool AThirdPersonCharacter::IsPlayingMontage()
 
 void AThirdPersonCharacter::Equip()
 {
-	// print is equiped
-	UE_LOG(LogTemp, Warning, TEXT("IsEquipped: %d"), IsEquipped);
 	if (IsEquipped)
 	{
 		DrawComponent->SetVisibility(true);
@@ -326,7 +326,7 @@ void AThirdPersonCharacter::AttackHitDetection()
 	FVector StartLocation = DrawComponent->GetSocketLocation("Start");
 	FVector EndLocation = DrawComponent->GetSocketLocation("End");
 
-	float Radius = 10.0f;
+	float Radius = 20.0f;
 	float HalfHeight = (EndLocation - StartLocation).Size() / 2;
 	FQuat Rotation = DrawComponent->GetSocketQuaternion("End");
 
@@ -361,16 +361,23 @@ void AThirdPersonCharacter::AttackHitDetection()
 	DrawDebugCapsule(GetWorld(), (StartLocation + EndLocation) / 2, HalfHeight, Radius, Rotation, bHit ? FColor::Green : FColor::Red, false, 1.0f, 0, 1.0f);
 }
 
-void AThirdPersonCharacter::Landed(const FHitResult& Hit)
+
+// use this instead of Landed event which is not triggered when landing due to a bug
+void AThirdPersonCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
 {
-	Super::Landed(Hit);
-	
-	// if not can attack means that the character is in the middle of an attack
-	if (!canAttack) {
-		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
-		animInstance->Montage_Play(JumpAttackMontage, 1.0f);
-		animInstance->Montage_JumpToSection("Land");
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+
+	if (PrevMovementMode == EMovementMode::MOVE_Falling && GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Walking)
+	{
+		if (!canAttack) {
+			UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+			animInstance->Montage_Play(JumpAttackMontage, 1.0f);
+			animInstance->Montage_JumpToSection("Land");
+			ResetAttack();
+		}
 	}
+
+	
 }
 
 

@@ -11,6 +11,8 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Enemy/MeleeHitInterface.h"
+#include <Kismet/GameplayStatics.h>
+#include "ActorComponents/TargetLockComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -119,6 +121,7 @@ void AThirdPersonCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 		// Heavy Attack
 		EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Started, this, &AThirdPersonCharacter::HeavyAttack);
 		EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Completed, this, &AThirdPersonCharacter::HeavyAttack);
+	
 	}
 	else
 	{
@@ -292,6 +295,7 @@ void AThirdPersonCharacter::HeavyAttack(const FInputActionValue& Value) {
 				EndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
 				AnimInstance->Montage_SetEndDelegate(EndDelegate, HeavyAttackMontage);
 				AnimInstance->Montage_JumpToSection("End");
+				AttackMultiplier = heavyAttackMultiplier;
 			}
 			else {
 				AnimInstance->Montage_Stop(0.5f, HeavyAttackMontage);
@@ -350,10 +354,22 @@ void AThirdPersonCharacter::AttackHitDetection()
 
 	if (bHit) {
 		AActor* HitActor = HitResult.GetActor();
+
+		float DamageAmount = WeaponDamage * AttackMultiplier;
 		
 		IMeleeHitInterface* MeleeHitActor = Cast<IMeleeHitInterface>(HitActor);
 		if (MeleeHitActor) {
+			UGameplayStatics::ApplyPointDamage(
+				HitActor,
+				DamageAmount,
+				GetActorLocation(),
+				HitResult,
+				GetInstigatorController(),
+				this,
+				UDamageType::StaticClass()
+			);
 			MeleeHitActor->OnMeleeHit(HitResult);
+			
 		}
 	}
 
@@ -380,11 +396,23 @@ void AThirdPersonCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode
 	
 }
 
+void AThirdPersonCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+	if (!canAttack) {
+		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+		animInstance->Montage_Play(JumpAttackMontage, 1.0f);
+		animInstance->Montage_JumpToSection("Land");
+		ResetAttack();
+	}
+}
+
 
 void AThirdPersonCharacter::ResetAttack()
 {
 	canAttack = true;
 	AttackCount = 0;
+	AttackMultiplier = 1.0f;
 }
 
 void AThirdPersonCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)

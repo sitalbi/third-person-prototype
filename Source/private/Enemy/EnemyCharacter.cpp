@@ -16,8 +16,8 @@ void AEnemyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	isHit = false;
 	HitCount = 0;
+	Health = MaxHealth;
 }
 
 // Called every frame
@@ -32,4 +32,20 @@ void AEnemyCharacter::OnMeleeHit(FHitResult HitResult)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Melee Hit"));
 
+}
+
+float AEnemyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+	if (animInstance && !animInstance->Montage_IsPlaying(HitMontage))
+	{
+		Health -= DamageAmount;
+		Health = fmax(Health, 0);
+		if (Health == 0)
+		{
+			Destroy();
+		}
+	}
+	
+	return DamageAmount;
 }

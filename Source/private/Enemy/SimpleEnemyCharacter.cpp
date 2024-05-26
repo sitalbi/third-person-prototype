@@ -1,4 +1,5 @@
 #include "Enemy/SimpleEnemyCharacter.h"
+#include <Kismet/KismetMathLibrary.h>
 
 ASimpleEnemyCharacter::ASimpleEnemyCharacter()
 {
@@ -6,9 +7,6 @@ ASimpleEnemyCharacter::ASimpleEnemyCharacter()
 
 void ASimpleEnemyCharacter::OnMeleeHit(FHitResult HitResult)
 {
-
-	// TODO: make the character face the direction of the hit
-
 	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 	if (animInstance && !animInstance->Montage_IsPlaying(HitMontage))
 	{
@@ -17,7 +15,23 @@ void ASimpleEnemyCharacter::OnMeleeHit(FHitResult HitResult)
 		FName section = FName(*FString::Printf(TEXT("Hit%d"), HitCount + 1));
 		animInstance->Montage_JumpToSection(section);
 		HitCount = (HitCount + 1) % animInstance->GetCurrentActiveMontage()->GetNumSections();
-
-		
 	}
+}
+
+float ASimpleEnemyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float DamageDealt = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	// Rotate the enemy to face the player (damage causer)
+	FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), DamageCauser->GetActorLocation());
+	SetActorRotation(FRotator(0, LookAtRotation.Yaw, 0));
+
+	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+	if (animInstance && !animInstance->Montage_IsPlaying(HitMontage))
+	{
+		if (GEngine) {
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Health: " + FString::SanitizeFloat(Health)));
+		}
+	}
+	return DamageDealt;
 }

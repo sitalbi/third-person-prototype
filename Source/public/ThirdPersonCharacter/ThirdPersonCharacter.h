@@ -61,6 +61,8 @@ class AThirdPersonCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* HeavyAttackAction;
 
+	
+
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
 	bool IsEquipped = false;
@@ -81,6 +83,9 @@ class AThirdPersonCharacter : public ACharacter
 	UStaticMesh* WeaponMesh;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
+	float WeaponDamage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
 	UBoxComponent* WeaponCollision;
 
 
@@ -94,6 +99,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	float sprintSpeed = 800.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	float heavyAttackMultiplier = 1.5f;
+
 	UFUNCTION()
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
@@ -106,6 +114,7 @@ public:
 	void AttackHitDetection();
 
 	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
+	virtual void Landed(const FHitResult& Hit) override;
 
 protected:
 
@@ -137,6 +146,8 @@ protected:
 	unsigned int AttackCount = 0;
 
 	bool canAttack = true;
+
+	float AttackMultiplier = 1.0f;
 
 
 protected:

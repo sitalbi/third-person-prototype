@@ -28,9 +28,6 @@ protected:
 	
 	int HitCount = 0;
 
-	
-private:
-
 	UPROPERTY(EditAnywhere, Category = "Controller")
 	FName Name;
 
@@ -46,4 +43,6 @@ private:
 public:
 	// override MeleeHitInterface
 	virtual void OnMeleeHit(FHitResult HitResult) override;
+
+	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 };

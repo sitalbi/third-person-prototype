@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TimerManager.h"
 #include "Components/ActorComponent.h"
 #include "ThirdPersonCharacter/ThirdPersonCharacter.h"
 #include "TargetLockComponent.generated.h"
@@ -23,14 +24,20 @@ protected:
 
 	TArray<AActor*> TraceForTarget();
 
-public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	AActor* GetTargetActor(TArray<AActor*> actors);
 
-	void TargetLockOn();
+	void UpdateTargetLock();
+
+public:	
+
+	void TargetLockOn(const FInputActionValue& Value);
 
 	UPROPERTY(EditAnywhere, Category = "Lock variables")
 	float lockOnDistance = 50.0f;
+	UPROPERTY(EditAnywhere, Category = "Lock variables")
+	float interpolationSpeed = 10.0f;
+	UPROPERTY(EditAnywhere, Category = "Lock variables")
+	float distanceFactor = 2.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Lock variables")
 	TSubclassOf<AActor>lockOnClass;
@@ -40,9 +47,17 @@ public:
 	UInputAction* TargetLockAction;
 
 private:
+
+	FTimerHandle TargetLockTimerHandle;
 	
 	AActor* targetActor;
 
 	AThirdPersonCharacter* playerCharacter;
+
+	void SetLockTimer(bool IsLocked);
+
+	FRotator GetLockOnRotation();
+
+	bool isLockedOn = false;
 
 };

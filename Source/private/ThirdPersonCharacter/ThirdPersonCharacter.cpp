@@ -12,7 +12,7 @@
 #include "InputActionValue.h"
 #include "Enemy/MeleeHitInterface.h"
 #include <Kismet/GameplayStatics.h>
-#include "ActorComponents/TargetLockComponent.h"
+#include <ActorComponents/TargetLockComponent.h>
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -88,6 +88,15 @@ void AThirdPersonCharacter::BeginPlay()
 	Equip();
 	DrawComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	
+	TargetLockComponent = Cast<UTargetLockComponent>(GetComponentByClass(UTargetLockComponent::StaticClass()));
+
+	// Debug
+	if (TargetLockComponent) {
+		UE_LOG(LogTemp, Warning, TEXT("TargetLockComponent found"));
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("TargetLockComponent not found"));
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -165,7 +174,7 @@ void AThirdPersonCharacter::Sprint(const FInputActionValue& Value)
 
 	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 
-	if (bSprint && !GetCharacterMovement()->IsFalling() && !IsPlayingMontage())
+	if (bSprint && !GetCharacterMovement()->IsFalling() && !IsPlayingMontage() && !TargetLockComponent->GetIsLockedOn())
 	{
 		SetSpeed(sprintSpeed);
 	}
@@ -378,24 +387,7 @@ void AThirdPersonCharacter::AttackHitDetection()
 }
 
 
-// use this instead of Landed event which is not triggered when landing due to a bug
-void AThirdPersonCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
-{
-	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
-
-	if (PrevMovementMode == EMovementMode::MOVE_Falling && GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Walking)
-	{
-		if (!canAttack) {
-			UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
-			animInstance->Montage_Play(JumpAttackMontage, 1.0f);
-			animInstance->Montage_JumpToSection("Land");
-			ResetAttack();
-		}
-	}
-
-	
-}
-
+// Not working for the moment the event seems to not be triggered
 void AThirdPersonCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
@@ -406,7 +398,6 @@ void AThirdPersonCharacter::Landed(const FHitResult& Hit)
 		ResetAttack();
 	}
 }
-
 
 void AThirdPersonCharacter::ResetAttack()
 {
@@ -441,5 +432,10 @@ void AThirdPersonCharacter::SetDefaultSpeed()
 void AThirdPersonCharacter::SetCanAttack()
 {
 	this->canAttack = true;
+}
+
+bool AThirdPersonCharacter::GetIsEquipped()
+{
+	return IsEquipped;
 }
 

@@ -31,8 +31,6 @@ void UTargetLockComponent::TargetLockOn(const FInputActionValue& Value)
 		TArray<AActor*> actors = TraceForTarget();
 		if (actors.Num() > 0)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Actors size: %d"), actors.Num());
-
 			if (targetActor == nullptr) {
 				targetActor = GetTargetActor(actors);
 			}
@@ -40,15 +38,19 @@ void UTargetLockComponent::TargetLockOn(const FInputActionValue& Value)
 
 			if (isLockedOn) {
 				SetLockTimer(true);
+				playerCharacter->SetDefaultSpeed(); // stop sprinting
 			}
 		}
 	}
 	else
 	{
-		targetActor = nullptr;
-		isLockedOn = false;
 		SetLockTimer(false);
 	}
+}
+
+bool UTargetLockComponent::GetIsLockedOn()
+{
+	return isLockedOn;
 }
 
 
@@ -141,13 +143,17 @@ AActor* UTargetLockComponent::GetTargetActor(TArray<AActor*> actors) {
 
 void UTargetLockComponent::UpdateTargetLock()
 {	
-	if (!isLockedOn || !targetActor) 
+	if (!isLockedOn || targetActor==nullptr) 
 	{
 		SetLockTimer(false);
 		return;
 	} 
 	else  
 	{
+		if (!IsValid(targetActor)) {
+			targetActor = nullptr;
+			return;
+		}
 		FVector start = playerCharacter->GetActorLocation();
 		FVector end = targetActor->GetActorLocation();
 
@@ -170,6 +176,12 @@ void UTargetLockComponent::UpdateTargetLock()
 
 			// Set the rotation of the camera
 			playerCharacter->GetController()->SetControlRotation(newRotation);
+
+			if (playerCharacter->GetIsEquipped()) {
+				// Set the rotation of the player
+				playerCharacter->SetActorRotation(FRotator(0, newRotation.Yaw, 0));
+			}
+
 		}
 	}
 
@@ -184,6 +196,8 @@ void UTargetLockComponent::SetLockTimer(bool IsLocked)
 	else
 	{
 		GetWorld()->GetTimerManager().ClearTimer(TargetLockTimerHandle);
+		targetActor = nullptr;
+		isLockedOn = false;
 	}
 }
 
@@ -200,6 +214,7 @@ FRotator UTargetLockComponent::GetLockOnRotation()
 	FVector Direction = end - start;
 
 	FRotator Rot = FRotationMatrix::MakeFromX(Direction).Rotator();
+
 
 	return Rot;
 }

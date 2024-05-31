@@ -8,7 +8,6 @@
 #include "ThirdPersonCharacter/ThirdPersonCharacter.h"
 #include "TargetLockComponent.generated.h"
 
-
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class THIRDPERSON_API UTargetLockComponent : public UActorComponent
 {
@@ -31,6 +30,9 @@ protected:
 public:	
 
 	void TargetLockOn(const FInputActionValue& Value);
+
+	UFUNCTION(BlueprintCallable)
+	bool GetIsLockedOn();
 
 	UPROPERTY(EditAnywhere, Category = "Lock variables")
 	float lockOnDistance = 50.0f;

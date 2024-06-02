@@ -17,6 +17,13 @@ public:
 	// Sets default values for this component's properties
 	UTargetLockComponent();
 
+
+	enum class EDirection 
+	{
+		Left,
+		Right
+	};
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -24,6 +31,9 @@ protected:
 	TArray<AActor*> TraceForTarget();
 
 	AActor* GetTargetActor(TArray<AActor*> actors);
+	AActor* GetTargetActorSwitch(TArray<AActor*> actors, EDirection direction);
+
+	void SwitchTargetLock(const FInputActionValue& Value);
 
 	void UpdateTargetLock();
 
@@ -35,11 +45,11 @@ public:
 	bool GetIsLockedOn();
 
 	UPROPERTY(EditAnywhere, Category = "Lock variables")
-	float lockOnDistance = 50.0f;
+	float lockOnDistance = 1000.0f;
 	UPROPERTY(EditAnywhere, Category = "Lock variables")
 	float interpolationSpeed = 10.0f;
 	UPROPERTY(EditAnywhere, Category = "Lock variables")
-	float distanceFactor = 2.0f;
+	float distanceFactor = 3.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Lock variables")
 	TSubclassOf<AActor>lockOnClass;
@@ -47,6 +57,11 @@ public:
 	/** Target Lock Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* TargetLockAction;
+
+	/** Switch target Lock Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SwitchTargetLockAction;
+
 
 private:
 
@@ -63,3 +78,4 @@ private:
 	bool isLockedOn = false;
 
 };
+

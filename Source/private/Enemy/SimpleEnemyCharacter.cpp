@@ -13,7 +13,7 @@ void ASimpleEnemyCharacter::OnMeleeHit(FHitResult HitResult)
 		animInstance->Montage_Play(HitMontage, 1.0);
 
 		FName section = FName(*FString::Printf(TEXT("Hit%d"), HitCount + 1));
-		animInstance->Montage_JumpToSection(section);
+		animInstance->Montage_JumpToSection("Hit3");
 		HitCount = (HitCount + 1) % animInstance->GetCurrentActiveMontage()->GetNumSections();
 	}
 }

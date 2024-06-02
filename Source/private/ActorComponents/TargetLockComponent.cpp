@@ -6,6 +6,7 @@
 #include <Kismet/KismetMathLibrary.h>
 
 
+
 // Sets default values for this component's properties
 UTargetLockComponent::UTargetLockComponent()
 {
@@ -22,6 +23,7 @@ void UTargetLockComponent::BeginPlay()
 
 	UEnhancedInputComponent* playerInputComponent = Cast<UEnhancedInputComponent>(playerCharacter->InputComponent);
 	playerInputComponent->BindAction(TargetLockAction, ETriggerEvent::Triggered, this, &UTargetLockComponent::TargetLockOn);
+	playerInputComponent->BindAction(SwitchTargetLockAction, ETriggerEvent::Triggered, this, &UTargetLockComponent::SwitchTargetLock);
 }
 
 
@@ -54,8 +56,6 @@ bool UTargetLockComponent::GetIsLockedOn()
 }
 
 
-
-
 TArray<AActor*> UTargetLockComponent::TraceForTarget()
 {
 	// Get all actors in a zone around the player using multi-sphere trace
@@ -69,10 +69,10 @@ TArray<AActor*> UTargetLockComponent::TraceForTarget()
 	FCollisionShape shape = FCollisionShape::MakeSphere(lockOnDistance);
 
 	bool hit = GetWorld()->SweepMultiByObjectType(
-		hitResults, 
-		pos, 
-		pos, 
-		FQuat::Identity, 
+		hitResults,
+		pos,
+		pos,
+		FQuat::Identity,
 		FCollisionObjectQueryParams(ECollisionChannel::ECC_Pawn),
 		shape
 	);
@@ -92,9 +92,9 @@ TArray<AActor*> UTargetLockComponent::TraceForTarget()
 			}
 		}
 	}
-	
+
 	// Debug draw the sphere
-	DrawDebugSphere(GetWorld(), pos, lockOnDistance, 12, actorsToReturn.Num() > 0 ? FColor::Green : FColor::Red, false, 5.f);
+	//DrawDebugSphere(GetWorld(), pos, lockOnDistance, 12, actorsToReturn.Num() > 0 ? FColor::Green : FColor::Red, false, 5.f);
 
 	return actorsToReturn;
 
@@ -126,7 +126,7 @@ AActor* UTargetLockComponent::GetTargetActor(TArray<AActor*> actors) {
 
 		// Check the closest actor to the center of the screen
 		FRotator r = UKismetMathLibrary::FindLookAtRotation(playerCharacter->GetActorLocation(), actor->GetActorLocation());
-		
+
 		double dot = FVector::DotProduct(playerCharacter->GetFollowCamera()->GetForwardVector(), r.Vector());
 
 		if (dot > minDot)
@@ -136,19 +136,81 @@ AActor* UTargetLockComponent::GetTargetActor(TArray<AActor*> actors) {
 		}
 	}
 	// Debug draw the line
-	DrawDebugLine(GetWorld(), playerCharacter->GetFollowCamera()->GetComponentLocation(), target->GetActorLocation(), FColor::Red, false, 5.f);
-	
+	//DrawDebugLine(GetWorld(), playerCharacter->GetFollowCamera()->GetComponentLocation(), target->GetActorLocation(), FColor::Red, false, 5.f);
+
 	return target;
 }
 
+AActor* UTargetLockComponent::GetTargetActorSwitch(TArray<AActor*> actors, EDirection direction)
+{
+	AActor* target = nullptr;
+	double minDot = -1.0;
+
+	for (AActor* actor : actors)
+	{
+		if (!actor) continue;
+
+		FHitResult hitResult;
+		FVector start = playerCharacter->GetFollowCamera()->GetComponentLocation();
+		FVector end = actor->GetActorLocation();
+
+		FCollisionQueryParams params;
+		params.AddIgnoredActor(playerCharacter);
+		if (targetActor != nullptr) params.AddIgnoredActor(targetActor);
+
+		bool hit = GetWorld()->LineTraceSingleByObjectType(
+			hitResult,
+			start,
+			end,
+			FCollisionObjectQueryParams(ECollisionChannel::ECC_Pawn),
+			params
+		);
+
+		double dot = FVector::DotProduct(playerCharacter->GetFollowCamera()->GetRightVector(), hitResult.Normal);
+		bool isCorrectSide = (direction == EDirection::Left) ? (asin(dot) > 0) : (asin(dot) < 0);
+
+		if (isCorrectSide)
+		{
+			FRotator r = UKismetMathLibrary::FindLookAtRotation(playerCharacter->GetActorLocation(), actor->GetActorLocation());
+			dot = FVector::DotProduct(playerCharacter->GetFollowCamera()->GetForwardVector(), r.Vector());
+
+			if (dot > minDot)
+			{
+				minDot = dot;
+				target = actor;
+			}
+		}
+	}
+
+	return target;
+}
+
+
+void UTargetLockComponent::SwitchTargetLock(const FInputActionValue& Value)
+{
+	if (isLockedOn) {
+		FVector2D InputAxisVector = Value.Get<FVector2D>();
+
+		AActor* newTarget = nullptr;
+		EDirection direction = InputAxisVector.X > 0 ? EDirection::Right : EDirection::Left;
+		newTarget = GetTargetActorSwitch(TraceForTarget(), direction);
+
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("New Target: %s"), newTarget ? *newTarget->GetName() : TEXT("None")));
+
+		if (newTarget != nullptr) {
+			targetActor = newTarget;
+		}
+	}
+}
+
 void UTargetLockComponent::UpdateTargetLock()
-{	
-	if (!isLockedOn || targetActor==nullptr) 
+{
+	if (!isLockedOn || targetActor == nullptr)
 	{
 		SetLockTimer(false);
 		return;
-	} 
-	else  
+	}
+	else
 	{
 		if (!IsValid(targetActor)) {
 			targetActor = nullptr;
@@ -172,15 +234,23 @@ void UTargetLockComponent::UpdateTargetLock()
 			float deltaTime = GetWorld()->GetDeltaSeconds();
 			float interpSpeed = interpolationSpeed;
 
+			if (playerCharacter->GetIsEquipped()) {
+				// Interpolate the player's rotation smoothly
+				FRotator currentPlayerRotation = playerCharacter->GetActorRotation();
+				FRotator targetPlayerRotation = FRotator(0, targetRotation.Yaw, 0);
+
+				FRotator newPlayerRotation = FMath::RInterpTo(currentPlayerRotation, targetPlayerRotation, deltaTime, interpSpeed * 2.0f);
+
+				// Set the interpolated rotation to the player
+				playerCharacter->SetActorRotation(newPlayerRotation);
+			}
+
 			FRotator newRotation = FMath::RInterpTo(currentRotation, targetRotation, deltaTime, interpSpeed);
 
 			// Set the rotation of the camera
 			playerCharacter->GetController()->SetControlRotation(newRotation);
 
-			if (playerCharacter->GetIsEquipped()) {
-				// Set the rotation of the player
-				playerCharacter->SetActorRotation(FRotator(0, newRotation.Yaw, 0));
-			}
+
 
 		}
 	}
@@ -209,7 +279,7 @@ FRotator UTargetLockComponent::GetLockOnRotation()
 
 	double dist = FVector::Dist(start, targetPos);
 
-	FVector end = FVector(targetPos.X, targetPos.Y, targetPos.Z - (dist/distanceFactor));
+	FVector end = FVector(targetPos.X, targetPos.Y, targetPos.Z - (dist / distanceFactor));
 
 	FVector Direction = end - start;
 

@@ -2,6 +2,8 @@
 
 
 #include "Enemy/EnemyCharacter.h"
+#include <Kismet/GameplayStatics.h>
+#include <Kismet/KismetMathLibrary.h>
 
 // Sets default values
 AEnemyCharacter::AEnemyCharacter()
@@ -18,12 +20,32 @@ void AEnemyCharacter::BeginPlay()
 
 	HitCount = 0;
 	Health = MaxHealth;
+
+	HealthBar = FindComponentByClass<UWidgetComponent>();
+
+	if (HealthBar) {
+		UE_LOG(LogTemp, Warning, TEXT("HealthBar Found"));
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("HealthBar Not Found"));
+	}
+
 }
 
 // Called every frame
 void AEnemyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// rotate health bar to face player
+	if (HealthBar) {
+		// get camera location
+		FVector CameraLocation = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0)->GetCameraLocation();
+
+		// look at camera
+		FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(HealthBar->GetComponentLocation(), CameraLocation);
+		HealthBar->SetWorldRotation(LookAtRotation);
+	}
 
 }
 

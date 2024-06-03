@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <Components/WidgetComponent.h>
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Enemy/MeleeHitInterface.h"
@@ -22,23 +23,25 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* HitMontage;
 
+	UPROPERTY(EditAnywhere, Category = "Controller")
+	FName Name;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Combat")
+	float Health;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Combat")
+	float MaxHealth;
+
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	float AttackDamage;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	
 	int HitCount = 0;
 
-	UPROPERTY(EditAnywhere, Category = "Controller")
-	FName Name;
-
-	UPROPERTY(VisibleAnywhere, Category = "Combat")
-	float Health;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Combat")
-	float MaxHealth;
-
-	UPROPERTY(EditAnywhere, Category = "Combat")
-	float AttackDamage;
+	UWidgetComponent* HealthBar;
 
 public:
 	// override MeleeHitInterface

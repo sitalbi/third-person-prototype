@@ -64,6 +64,10 @@ class AThirdPersonCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* HeavyAttackAction;
 
+	/** Roll Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* RollAction;
+
 	
 
 
@@ -80,6 +84,9 @@ class AThirdPersonCharacter : public ACharacter
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* HeavyAttackMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* RollMontage;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
 	UStaticMesh* WeaponMesh;
@@ -114,8 +121,14 @@ public:
 	void SetDefaultSpeed();
 	void SetCanAttack();
 
+	void SetOrientRotationToMovement(bool orientation);
+
 	UFUNCTION(BlueprintCallable)
 	bool GetIsEquipped();
+
+	UFUNCTION(BlueprintCallable)
+	bool GetIsRolling();
+
 
 	void Equip();
 	void AttackHitDetection();
@@ -141,6 +154,9 @@ protected:
 	void Attack(const FInputActionValue& Value);
 	void HeavyAttack(const FInputActionValue& Value);
 
+	/** Called for rolling input */
+	void Roll(const FInputActionValue& Value);
+
 	/** Check for animation playing */
 	bool IsPlayingMontage();
 
@@ -158,6 +174,9 @@ protected:
 	float AttackMultiplier = 1.0f;
 
 	bool IsEquipped = false;
+	bool isRolling = false;
+
+	FVector RollDirection;
 
 
 protected:

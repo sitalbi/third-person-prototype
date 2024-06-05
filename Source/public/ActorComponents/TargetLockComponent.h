@@ -52,6 +52,9 @@ public:
 	float distanceFactor = 3.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Lock variables")
+	float clampAngle = 35.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Lock variables")
 	TSubclassOf<AActor>lockOnClass;
 
 	/** Target Lock Input Action */
@@ -61,6 +64,8 @@ public:
 	/** Switch target Lock Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SwitchTargetLockAction;
+
+	FVector GetTargetLocation();
 
 
 private:

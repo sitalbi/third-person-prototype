@@ -233,21 +233,18 @@ void UTargetLockComponent::UpdateTargetLock()
 			float deltaTime = GetWorld()->GetDeltaSeconds();
 			float interpSpeed = interpolationSpeed;
 
-			if (playerCharacter->GetIsEquipped()) {
-				// Interpolate the player's rotation smoothly
-				FRotator currentPlayerRotation = playerCharacter->GetActorRotation();
-				FRotator targetPlayerRotation = FRotator(0, targetRotation.Yaw, 0);
-
-				FRotator newPlayerRotation = FMath::RInterpTo(currentPlayerRotation, targetPlayerRotation, deltaTime, interpSpeed * 2.0f);
-
-				// Set the interpolated rotation to the player
-				playerCharacter->SetActorRotation(newPlayerRotation);
+			/*if (!playerCharacter->GetIsRolling()) {
+				playerCharacter->SetOrientRotationToMovement(false);
 			}
+			else {
+				playerCharacter->SetOrientRotationToMovement(true);
+			}*/
+			
 
 			FRotator newRotation = FMath::RInterpTo(currentRotation, targetRotation, deltaTime, interpSpeed);
 
 			// clamp the pitch to prevent the player from looking up or down too much
-			newRotation.Pitch = FMath::ClampAngle(newRotation.Pitch, -35.0f, 35.0f);
+			newRotation.Pitch = FMath::ClampAngle(newRotation.Pitch, -clampAngle, clampAngle);
 
 			// Set the rotation of the camera
 			playerCharacter->GetController()->SetControlRotation(newRotation);
@@ -256,6 +253,17 @@ void UTargetLockComponent::UpdateTargetLock()
 
 }
 
+
+FVector UTargetLockComponent::GetTargetLocation()
+{
+	if(targetActor != nullptr)
+	{
+		return targetActor->GetActorLocation();
+	} else
+	{
+		return FVector(0, 0, 0);
+	}
+}
 
 void UTargetLockComponent::SetLockTimer(bool IsLocked)
 {
@@ -299,11 +307,13 @@ void UTargetLockComponent::ChangeTargetActor(AActor* newTarget)
 		isLockedOn = true;
 		SetLockTimer(true);
 		playerCharacter->SetDefaultSpeed();
+		playerCharacter->SetOrientRotationToMovement(false);
 	}
 	else
 	{
 		SetLockTimer(false);
 		isLockedOn = false;
+		playerCharacter->SetOrientRotationToMovement(true);
 	}
 
 	targetActor = newTarget;

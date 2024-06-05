@@ -13,6 +13,7 @@
 #include "Enemy/MeleeHitInterface.h"
 #include <Kismet/GameplayStatics.h>
 #include <ActorComponents/TargetLockComponent.h>
+#include <Kismet/KismetMathLibrary.h>
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -130,6 +131,9 @@ void AThirdPersonCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 		// Heavy Attack
 		EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Started, this, &AThirdPersonCharacter::HeavyAttack);
 		EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Completed, this, &AThirdPersonCharacter::HeavyAttack);
+
+		// Roll
+		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Triggered, this, &AThirdPersonCharacter::Roll);
 	
 	}
 	else
@@ -246,6 +250,9 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 					MoveDirection = GetActorForwardVector();
 				}
 				FRotator NewRotation = MoveDirection.Rotation();
+				if (TargetLockComponent->GetIsLockedOn()) {
+					NewRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetLockComponent->GetTargetLocation());
+				}
 				NewRotation.Pitch = 0; // Ensure we only rotate around the Yaw axis
 				SetActorRotation(NewRotation);
 			}
@@ -310,6 +317,33 @@ void AThirdPersonCharacter::HeavyAttack(const FInputActionValue& Value) {
 				AnimInstance->Montage_Stop(0.5f, HeavyAttackMontage);
 				ResetAttack();
 			}
+		}
+	}
+}
+
+void AThirdPersonCharacter::Roll(const FInputActionValue& Value)
+{
+	// input is a boolean
+	bool bRoll = Value.Get<bool>();
+
+	if (bRoll && !GetCharacterMovement()->IsFalling())
+	{
+		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+		if (animInstance) {
+			if (!animInstance->Montage_IsPlaying(RollMontage) && canAttack) {
+				RollDirection = GetLastMovementInputVector();
+				if (RollDirection.Size() < 0.1) {
+					RollDirection = -GetActorForwardVector(); // Roll backwards if no input
+				}
+				// make the player face the direction of the input
+				FRotator NewRotation = RollDirection.Rotation();
+				NewRotation.Pitch = 0; // Ensure we only rotate around the Yaw axis
+				SetActorRotation(NewRotation);
+
+				animInstance->Montage_Play(RollMontage, 1.0f);
+				animInstance->Montage_JumpToSection("RollF");
+			}
+			
 		}
 	}
 }
@@ -434,8 +468,35 @@ void AThirdPersonCharacter::SetCanAttack()
 	this->canAttack = true;
 }
 
+void AThirdPersonCharacter::SetOrientRotationToMovement(bool orientation)
+{
+	UCharacterMovementComponent* const MovementComponent = GetCharacterMovement();
+	if (MovementComponent)
+	{
+		if (orientation) {
+			MovementComponent->bOrientRotationToMovement = true;
+			MovementComponent->bUseControllerDesiredRotation = false;
+		}
+		else {
+			MovementComponent->bOrientRotationToMovement = false;
+			MovementComponent->bUseControllerDesiredRotation = true;
+		}
+	}
+}
+
 bool AThirdPersonCharacter::GetIsEquipped()
 {
 	return IsEquipped;
+}
+
+bool AThirdPersonCharacter::GetIsRolling()
+{
+	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+	if (animInstance) {
+		return animInstance->Montage_IsPlaying(RollMontage);
+	}
+	else {
+		return false;
+	}
 }
 

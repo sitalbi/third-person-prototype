@@ -5,5 +5,4 @@ A third person gameplay prototype on Unreal Engine where I try to experiment wit
 ## TODO
 - guard and parry system
 - dodge
-- health bar and UI
 - collectables (chests)

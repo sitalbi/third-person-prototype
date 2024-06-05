@@ -94,6 +94,8 @@ class AThirdPersonCharacter : public ACharacter
 public:
 	AThirdPersonCharacter();
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Debug, meta = (AllowPrivateAccess = "true"))
+	bool Debug = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	float defaultSpeed = 500.f;

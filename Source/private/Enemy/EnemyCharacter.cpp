@@ -25,6 +25,7 @@ void AEnemyCharacter::BeginPlay()
 
 	if (HealthBar) {
 		UE_LOG(LogTemp, Warning, TEXT("HealthBar Found"));
+		HealthBar->SetVisibility(false);
 	}
 	else {
 		UE_LOG(LogTemp, Warning, TEXT("HealthBar Not Found"));
@@ -38,7 +39,7 @@ void AEnemyCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	// rotate health bar to face player
-	if (HealthBar) {
+	if (HealthBar && HealthBar->IsVisible()) {
 		// get camera location
 		FVector CameraLocation = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0)->GetCameraLocation();
 
@@ -47,6 +48,16 @@ void AEnemyCharacter::Tick(float DeltaTime)
 		HealthBar->SetWorldRotation(LookAtRotation);
 	}
 
+	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+	if (animInstance && animInstance->Montage_IsPlaying(HitMontage) && !isLockedOn)
+	{
+		HealthBar->SetVisibility(true);
+	}
+	if(!isLockedOn && !animInstance->Montage_IsPlaying(HitMontage))
+	{
+		HealthBar->SetVisibility(false);
+	}
+	 
 }
 
 
@@ -68,6 +79,12 @@ float AEnemyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 			Destroy();
 		}
 	}
-	
+
 	return DamageAmount;
+}
+
+void AEnemyCharacter::SetIsLockedOn(bool bShow)
+{
+	isLockedOn = bShow;
+	HealthBar->SetVisibility(bShow);
 }

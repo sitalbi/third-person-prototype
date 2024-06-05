@@ -4,6 +4,7 @@
 #include <InputTriggers.h>
 #include <EnhancedInputComponent.h>
 #include <Kismet/KismetMathLibrary.h>
+#include <Enemy/EnemyCharacter.h>
 
 
 
@@ -33,20 +34,19 @@ void UTargetLockComponent::TargetLockOn(const FInputActionValue& Value)
 		TArray<AActor*> actors = TraceForTarget();
 		if (actors.Num() > 0)
 		{
+			AActor* newTarget = nullptr;
 			if (targetActor == nullptr) {
-				targetActor = GetTargetActor(actors);
+				newTarget = GetTargetActor(actors);
 			}
-			isLockedOn = targetActor != nullptr;
 
-			if (isLockedOn) {
-				SetLockTimer(true);
-				playerCharacter->SetDefaultSpeed(); // stop sprinting
+			if (newTarget) {
+				ChangeTargetActor(newTarget);
 			}
 		}
 	}
 	else
 	{
-		SetLockTimer(false);
+		ChangeTargetActor(nullptr);
 	}
 }
 
@@ -94,7 +94,7 @@ TArray<AActor*> UTargetLockComponent::TraceForTarget()
 	}
 
 	// Debug draw the sphere
-	//DrawDebugSphere(GetWorld(), pos, lockOnDistance, 12, actorsToReturn.Num() > 0 ? FColor::Green : FColor::Red, false, 5.f);
+	if(playerCharacter->Debug) DrawDebugSphere(GetWorld(), pos, lockOnDistance, 12, actorsToReturn.Num() > 0 ? FColor::Green : FColor::Red, false, 5.f);
 
 	return actorsToReturn;
 
@@ -136,7 +136,7 @@ AActor* UTargetLockComponent::GetTargetActor(TArray<AActor*> actors) {
 		}
 	}
 	// Debug draw the line
-	//DrawDebugLine(GetWorld(), playerCharacter->GetFollowCamera()->GetComponentLocation(), target->GetActorLocation(), FColor::Red, false, 5.f);
+	if(playerCharacter->Debug) DrawDebugLine(GetWorld(), playerCharacter->GetFollowCamera()->GetComponentLocation(), target->GetActorLocation(), FColor::Red, false, 5.f);
 
 	return target;
 }
@@ -195,10 +195,10 @@ void UTargetLockComponent::SwitchTargetLock(const FInputActionValue& Value)
 		EDirection direction = InputAxisVector.X > 0 ? EDirection::Right : EDirection::Left;
 		newTarget = GetTargetActorSwitch(TraceForTarget(), direction);
 
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("New Target: %s"), newTarget ? *newTarget->GetName() : TEXT("None")));
+		if(playerCharacter->Debug) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("New Target: %s"), newTarget ? *newTarget->GetName() : TEXT("None")));
 
 		if (newTarget != nullptr) {
-			targetActor = newTarget;
+			ChangeTargetActor(newTarget);
 		}
 	}
 }
@@ -207,13 +207,14 @@ void UTargetLockComponent::UpdateTargetLock()
 {
 	if (!isLockedOn || targetActor == nullptr)
 	{
-		SetLockTimer(false);
+		isLockedOn = false;
+		ChangeTargetActor(nullptr);
 		return;
 	}
 	else
 	{
 		if (!IsValid(targetActor)) {
-			targetActor = nullptr;
+			isLockedOn = false;
 			return;
 		}
 		FVector start = playerCharacter->GetActorLocation();
@@ -222,9 +223,7 @@ void UTargetLockComponent::UpdateTargetLock()
 		float distance = FVector::Dist(start, end);
 
 		if (distance > lockOnDistance) {
-			targetActor = nullptr;
 			isLockedOn = false;
-			SetLockTimer(false);
 		}
 		else {
 			FRotator currentRotation = playerCharacter->GetController()->GetControlRotation();
@@ -247,11 +246,11 @@ void UTargetLockComponent::UpdateTargetLock()
 
 			FRotator newRotation = FMath::RInterpTo(currentRotation, targetRotation, deltaTime, interpSpeed);
 
+			// clamp the pitch to prevent the player from looking up or down too much
+			newRotation.Pitch = FMath::ClampAngle(newRotation.Pitch, -35.0f, 35.0f);
+
 			// Set the rotation of the camera
 			playerCharacter->GetController()->SetControlRotation(newRotation);
-
-
-
 		}
 	}
 
@@ -266,8 +265,6 @@ void UTargetLockComponent::SetLockTimer(bool IsLocked)
 	else
 	{
 		GetWorld()->GetTimerManager().ClearTimer(TargetLockTimerHandle);
-		targetActor = nullptr;
-		isLockedOn = false;
 	}
 }
 
@@ -288,3 +285,27 @@ FRotator UTargetLockComponent::GetLockOnRotation()
 
 	return Rot;
 }
+
+void UTargetLockComponent::ChangeTargetActor(AActor* newTarget)
+{
+	if (targetActor != nullptr)
+	{
+		Cast<AEnemyCharacter>(targetActor)->SetIsLockedOn(false);
+	}
+
+	if (newTarget != nullptr)
+	{
+		Cast<AEnemyCharacter>(newTarget)->SetIsLockedOn(true);
+		isLockedOn = true;
+		SetLockTimer(true);
+		playerCharacter->SetDefaultSpeed();
+	}
+	else
+	{
+		SetLockTimer(false);
+		isLockedOn = false;
+	}
+
+	targetActor = newTarget;
+}
+

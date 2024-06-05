@@ -26,12 +26,5 @@ float ASimpleEnemyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& 
 	FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), DamageCauser->GetActorLocation());
 	SetActorRotation(FRotator(0, LookAtRotation.Yaw, 0));
 
-	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
-	if (animInstance && !animInstance->Montage_IsPlaying(HitMontage))
-	{
-		if (GEngine) {
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Health: " + FString::SanitizeFloat(Health)));
-		}
-	}
 	return DamageDealt;
 }

@@ -35,6 +35,8 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	float AttackDamage;
 
+	bool isLockedOn = false;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -48,4 +50,6 @@ public:
 	virtual void OnMeleeHit(FHitResult HitResult) override;
 
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	void SetIsLockedOn(bool bShow);
 };

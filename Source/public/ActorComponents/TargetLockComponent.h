@@ -75,6 +75,8 @@ private:
 
 	FRotator GetLockOnRotation();
 
+	void ChangeTargetActor(AActor* newTarget);
+
 	bool isLockedOn = false;
 
 };

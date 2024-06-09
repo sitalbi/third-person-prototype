@@ -178,6 +178,8 @@ protected:
 
 	FVector RollDirection;
 
+	FOnMontageEnded OnAttackEndDelegate;
+
 
 protected:
 	// APawn interface

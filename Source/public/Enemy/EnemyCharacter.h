@@ -8,6 +8,9 @@
 #include "Enemy/MeleeHitInterface.h"
 #include "EnemyCharacter.generated.h"
 
+
+
+
 UCLASS()
 class THIRDPERSON_API AEnemyCharacter : public ACharacter, public IMeleeHitInterface
 {
@@ -22,20 +25,28 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* HitMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* AttackMontage;
 
-	UPROPERTY(EditAnywhere, Category = "Controller")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Details, meta = (AllowPrivateAccess = "true"))
 	FName Name;
 
-	UPROPERTY(BlueprintReadWrite, Category = "Combat")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	float Health;
 
-	UPROPERTY(BlueprintReadWrite, Category = "Combat")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	float MaxHealth;
 
-	UPROPERTY(EditAnywhere, Category = "Combat")
-	float AttackDamage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	float AttackBaseDamage;
+
 
 	bool isLockedOn = false;
+
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttackEnded);
+	UPROPERTY(BlueprintAssignable, Category = "Combat")
+	FOnAttackEnded OnAttackMontageEnded;
+
 
 protected:
 	// Called when the game starts or when spawned
@@ -52,4 +63,12 @@ public:
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	void SetIsLockedOn(bool bShow);
+
+	UFUNCTION(BlueprintCallable)
+	virtual void Attack();
+
+	void AttackEnd(UAnimMontage* Montage, bool bInterrupted);
+
+
+
 };

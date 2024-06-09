@@ -98,6 +98,7 @@ void AThirdPersonCharacter::BeginPlay()
 	else {
 		UE_LOG(LogTemp, Warning, TEXT("TargetLockComponent not found"));
 	}
+	 
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -151,7 +152,7 @@ void AThirdPersonCharacter::Move(const FInputActionValue& Value)
 	{
 		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 		// if the character is attacking or drawing weapon, he can't move
-		if (!canAttack || animInstance->Montage_IsPlaying(DrawMontage)) {
+		if (!canAttack || IsPlayingMontage()) {
 			return;
 		}
 
@@ -261,9 +262,8 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 				canAttack = false;
 				animInstance->Montage_Play(AttackMontage, 1.0f);
 
-				FOnMontageEnded EndDelegate;
-				EndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
-				animInstance->Montage_SetEndDelegate(EndDelegate, AttackMontage);
+				OnAttackEndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
+				animInstance->Montage_SetEndDelegate(OnAttackEndDelegate, AttackMontage);
 
 				FName section = FName(*FString::Printf(TEXT("Attack%d"), AttackCount + 1));
 				animInstance->Montage_JumpToSection(section);
@@ -283,7 +283,7 @@ void AThirdPersonCharacter::HeavyAttack(const FInputActionValue& Value) {
 
 	UE_LOG(LogTemp, Warning, TEXT("Heavy Attack: %d"), bHeavyAttack);
 
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 	if (bHeavyAttack)
 	{
 		if (!IsEquipped) {
@@ -292,29 +292,27 @@ void AThirdPersonCharacter::HeavyAttack(const FInputActionValue& Value) {
 		}
 		if (canAttack) {
 			canAttack = false;
-			AnimInstance->Montage_Play(HeavyAttackMontage, 1.0f);
+			animInstance->Montage_Play(HeavyAttackMontage, 1.0f);
 		}
 	}
 	else {
-		if (AnimInstance->Montage_IsPlaying(HeavyAttackMontage)) {
+		if (animInstance->Montage_IsPlaying(HeavyAttackMontage)) {
 			FString CurrentSectionName;
-			FAnimMontageInstance* MontageInstance = AnimInstance->GetActiveInstanceForMontage(HeavyAttackMontage);
+			FAnimMontageInstance* MontageInstance = animInstance->GetActiveInstanceForMontage(HeavyAttackMontage);
 			if (MontageInstance)
 			{
 				CurrentSectionName = MontageInstance->GetCurrentSection().ToString();
 			}
 			UE_LOG(LogTemp, Warning, TEXT("Current Section: %s"), *CurrentSectionName);
 			if (CurrentSectionName.Equals("Mid")) {
-				
-				AnimInstance->Montage_Play(HeavyAttackMontage, 1.0f);
-				FOnMontageEnded EndDelegate;
-				EndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
-				AnimInstance->Montage_SetEndDelegate(EndDelegate, HeavyAttackMontage);
-				AnimInstance->Montage_JumpToSection("End");
+				OnAttackEndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
+				animInstance->Montage_SetEndDelegate(OnAttackEndDelegate, AttackMontage);
+				animInstance->Montage_Play(HeavyAttackMontage, 1.0f);
+				animInstance->Montage_JumpToSection("End");
 				AttackMultiplier = heavyAttackMultiplier;
 			}
 			else {
-				AnimInstance->Montage_Stop(0.5f, HeavyAttackMontage);
+				animInstance->Montage_Stop(0.5f, HeavyAttackMontage);
 				ResetAttack();
 			}
 		}
@@ -351,7 +349,7 @@ void AThirdPersonCharacter::Roll(const FInputActionValue& Value)
 bool AThirdPersonCharacter::IsPlayingMontage()
 {
 	UAnimInstance * animInstance = GetMesh()->GetAnimInstance();
-	return animInstance->Montage_IsPlaying(AttackMontage) || animInstance->Montage_IsPlaying(DrawMontage);
+	return animInstance->Montage_IsPlaying(AttackMontage) || animInstance->Montage_IsPlaying(DrawMontage) || animInstance->Montage_IsPlaying(JumpAttackMontage);
 }
 
 void AThirdPersonCharacter::Equip()

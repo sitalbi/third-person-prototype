@@ -31,6 +31,15 @@ void AEnemyCharacter::BeginPlay()
 		UE_LOG(LogTemp, Warning, TEXT("HealthBar Not Found"));
 	}
 
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && AttackMontage)
+	{
+		// Bind the delegate directly to montage end event
+		FOnMontageEnded MontageDelegate;
+		MontageDelegate.BindUObject(this, &AEnemyCharacter::AttackEnd);
+		AnimInstance->Montage_SetEndDelegate(MontageDelegate, AttackMontage);
+	}
+
 }
 
 // Called every frame
@@ -87,4 +96,26 @@ void AEnemyCharacter::SetIsLockedOn(bool bShow)
 {
 	isLockedOn = bShow;
 	HealthBar->SetVisibility(bShow);
+}
+
+void AEnemyCharacter::Attack()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Attack"));
+	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+	if (animInstance)
+	{
+		animInstance->Montage_Play(AttackMontage, 1.0);
+		if (animInstance)
+		{
+			// Bind the delegate directly to montage end event
+			FOnMontageEnded MontageDelegate;
+			MontageDelegate.BindUObject(this, &AEnemyCharacter::AttackEnd);
+			animInstance->Montage_SetEndDelegate(MontageDelegate, AttackMontage);
+		}
+	}
+}
+
+void AEnemyCharacter::AttackEnd(UAnimMontage* Montage, bool bInterrupted)
+{
+	OnAttackMontageEnded.Broadcast();
 }

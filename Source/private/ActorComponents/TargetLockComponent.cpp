@@ -232,13 +232,6 @@ void UTargetLockComponent::UpdateTargetLock()
 
 			float deltaTime = GetWorld()->GetDeltaSeconds();
 			float interpSpeed = interpolationSpeed;
-
-			/*if (!playerCharacter->GetIsRolling()) {
-				playerCharacter->SetOrientRotationToMovement(false);
-			}
-			else {
-				playerCharacter->SetOrientRotationToMovement(true);
-			}*/
 			
 
 			FRotator newRotation = FMath::RInterpTo(currentRotation, targetRotation, deltaTime, interpSpeed);

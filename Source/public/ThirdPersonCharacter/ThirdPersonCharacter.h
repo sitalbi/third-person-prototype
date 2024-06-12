@@ -113,6 +113,26 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	float heavyAttackMultiplier = 1.5f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	float maxHealth = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	float maxStamina = 80.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	float health = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	float stamina = 80.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	float sprintStaminaDrainRate = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	float staminaRecoveryRate = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	float rollStaminaDrain = 1.0f;
+
 	UFUNCTION(BlueprintCallable)
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
@@ -161,6 +181,10 @@ protected:
 	bool IsPlayingMontage();
 
 	void ResetAttack();
+
+	void UpdateSprint();
+
+	void RecoverStamina();
 	
 	UStaticMeshComponent* DrawComponent;
 	UStaticMeshComponent* SheathComponent;
@@ -179,6 +203,11 @@ protected:
 	FVector RollDirection;
 
 	FOnMontageEnded OnAttackEndDelegate;
+
+	FTimerHandle SprintTimerHandle;
+
+
+	
 
 
 protected:

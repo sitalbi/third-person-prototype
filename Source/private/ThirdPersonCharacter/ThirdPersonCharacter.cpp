@@ -98,7 +98,9 @@ void AThirdPersonCharacter::BeginPlay()
 	else {
 		UE_LOG(LogTemp, Warning, TEXT("TargetLockComponent not found"));
 	}
-	 
+
+	health = maxHealth;
+	stamina = maxStamina;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -182,10 +184,12 @@ void AThirdPersonCharacter::Sprint(const FInputActionValue& Value)
 	if (bSprint && !GetCharacterMovement()->IsFalling() && !IsPlayingMontage() && !TargetLockComponent->GetIsLockedOn())
 	{
 		SetSpeed(sprintSpeed);
+		GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &AThirdPersonCharacter::UpdateSprint, GetWorld()->GetDeltaSeconds(), true);
 	}
 	else
 	{
 		SetDefaultSpeed();
+		GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &AThirdPersonCharacter::RecoverStamina, GetWorld()->GetDeltaSeconds(), true, 1.0f);
 	}
 
 }
@@ -225,7 +229,6 @@ void AThirdPersonCharacter::Draw(const FInputActionValue& Value)
 			IsEquipped = true;
 		}
 	}
-	
 }
 
 void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
@@ -324,7 +327,7 @@ void AThirdPersonCharacter::Roll(const FInputActionValue& Value)
 	// input is a boolean
 	bool bRoll = Value.Get<bool>();
 
-	if (bRoll && !GetCharacterMovement()->IsFalling())
+	if (bRoll && !GetCharacterMovement()->IsFalling() && (stamina > 0))
 	{
 		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 		if (animInstance) {
@@ -340,6 +343,10 @@ void AThirdPersonCharacter::Roll(const FInputActionValue& Value)
 
 				animInstance->Montage_Play(RollMontage, 1.0f);
 				animInstance->Montage_JumpToSection("RollF");
+
+
+				stamina -= rollStaminaDrain;
+				GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &AThirdPersonCharacter::RecoverStamina, GetWorld()->GetDeltaSeconds(), true, 1.0f);
 			}
 			
 		}
@@ -438,6 +445,31 @@ void AThirdPersonCharacter::ResetAttack()
 	AttackMultiplier = 1.0f;
 }
 
+void AThirdPersonCharacter::UpdateSprint()
+{
+	if (stamina > 0)
+	{
+		stamina -= GetWorld()->GetDeltaSeconds() * sprintStaminaDrainRate;
+	}
+	else
+	{
+		SetDefaultSpeed();
+		GetWorld()->GetTimerManager().ClearTimer(SprintTimerHandle);
+	}
+}
+
+void AThirdPersonCharacter::RecoverStamina()
+{
+	if (stamina < maxStamina)
+	{
+		stamina += GetWorld()->GetDeltaSeconds() * staminaRecoveryRate;
+	}
+	else {
+		stamina = maxStamina;
+		GetWorld()->GetTimerManager().ClearTimer(SprintTimerHandle);
+	}
+}
+
 void AThirdPersonCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	if (bInterrupted)
@@ -497,4 +529,3 @@ bool AThirdPersonCharacter::GetIsRolling()
 		return false;
 	}
 }
-

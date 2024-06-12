@@ -102,16 +102,13 @@ void AEnemyCharacter::Attack()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Attack"));
 	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
-	if (animInstance)
+	if (animInstance && !animInstance->Montage_IsPlaying(HitMontage))
 	{
 		animInstance->Montage_Play(AttackMontage, 1.0);
-		if (animInstance)
-		{
-			// Bind the delegate directly to montage end event
-			FOnMontageEnded MontageDelegate;
-			MontageDelegate.BindUObject(this, &AEnemyCharacter::AttackEnd);
-			animInstance->Montage_SetEndDelegate(MontageDelegate, AttackMontage);
-		}
+		// Bind the delegate directly to montage end event
+		FOnMontageEnded MontageDelegate;
+		MontageDelegate.BindUObject(this, &AEnemyCharacter::AttackEnd);
+		animInstance->Montage_SetEndDelegate(MontageDelegate, AttackMontage);
 	}
 }
 

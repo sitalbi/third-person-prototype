@@ -186,8 +186,7 @@ protected:
 
 	void RecoverStamina();
 	
-	UStaticMeshComponent* DrawComponent;
-	UStaticMeshComponent* SheathComponent;
+	UStaticMeshComponent* WeaponMeshComponent;
 
 	UTargetLockComponent* TargetLockComponent;
 

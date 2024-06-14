@@ -1,5 +1,6 @@
  // Copyright Epic Games, Inc. All Rights Reserved.
 
+
 #include "ThirdPersonCharacter/ThirdPersonCharacter.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
@@ -77,17 +78,13 @@ void AThirdPersonCharacter::BeginPlay()
 	GetComponents<UStaticMeshComponent>(StaticMeshComponents);
 	for (UStaticMeshComponent* StaticMeshComponent : StaticMeshComponents)
 	{
-		if (StaticMeshComponent->GetName() == "WeaponDraw")
+		if (StaticMeshComponent->GetName() == "Weapon")
 		{
-			DrawComponent = StaticMeshComponent;
-		}
-		else if (StaticMeshComponent->GetName() == "WeaponSheath")
-		{
-			SheathComponent = StaticMeshComponent;
+			WeaponMeshComponent = StaticMeshComponent;
 		}
 	}
 	Equip();
-	DrawComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	WeaponMeshComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	
 	TargetLockComponent = Cast<UTargetLockComponent>(GetComponentByClass(UTargetLockComponent::StaticClass()));
 
@@ -244,7 +241,7 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 		}
 
 		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
-		if (canAttack && animInstance) {  // Ensure animInstance is valid
+		if (canAttack && animInstance && !animInstance->Montage_IsPlaying(RollMontage)) {  // Ensure animInstance is valid
 			// make the player face the direction of the input
 			if (Controller != nullptr)
 			{
@@ -332,6 +329,12 @@ void AThirdPersonCharacter::Roll(const FInputActionValue& Value)
 		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 		if (animInstance) {
 			if (!animInstance->Montage_IsPlaying(RollMontage) && canAttack) {
+				float montagePlayRate = 1.0f;
+				if (stamina < rollStaminaDrain) {
+					// max between 0.5 and stamina/rollStaminaDrain
+					montagePlayRate = FMath::Max(0.6f, stamina / rollStaminaDrain);
+				}
+
 				RollDirection = GetLastMovementInputVector();
 				if (RollDirection.Size() < 0.1) {
 					RollDirection = -GetActorForwardVector(); // Roll backwards if no input
@@ -341,12 +344,18 @@ void AThirdPersonCharacter::Roll(const FInputActionValue& Value)
 				NewRotation.Pitch = 0; // Ensure we only rotate around the Yaw axis
 				SetActorRotation(NewRotation);
 
-				animInstance->Montage_Play(RollMontage, 1.0f);
+				animInstance->Montage_Play(RollMontage, montagePlayRate);
 				animInstance->Montage_JumpToSection("RollF");
 
 
 				stamina -= rollStaminaDrain;
-				GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &AThirdPersonCharacter::RecoverStamina, GetWorld()->GetDeltaSeconds(), true, 1.0f);
+
+				if (GetCharacterMovement()->MaxWalkSpeed == defaultSpeed) {
+					GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &AThirdPersonCharacter::RecoverStamina, GetWorld()->GetDeltaSeconds(), true, 1.0f);
+				}
+				else {
+					GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &AThirdPersonCharacter::UpdateSprint, GetWorld()->GetDeltaSeconds(), true, 0.5f);
+				}
 			}
 			
 		}
@@ -356,31 +365,27 @@ void AThirdPersonCharacter::Roll(const FInputActionValue& Value)
 bool AThirdPersonCharacter::IsPlayingMontage()
 {
 	UAnimInstance * animInstance = GetMesh()->GetAnimInstance();
-	return animInstance->Montage_IsPlaying(AttackMontage) || animInstance->Montage_IsPlaying(DrawMontage) || animInstance->Montage_IsPlaying(JumpAttackMontage);
+	return animInstance->Montage_IsPlaying(AttackMontage) || animInstance->Montage_IsPlaying(DrawMontage) || animInstance->Montage_IsPlaying(JumpAttackMontage) || animInstance->Montage_IsPlaying(RollMontage);
 }
 
 void AThirdPersonCharacter::Equip()
 {
-	if (IsEquipped)
+	if (WeaponMeshComponent)
 	{
-		DrawComponent->SetVisibility(true);
-		SheathComponent->SetVisibility(false);
-	}
-	else
-	{
-		DrawComponent->SetVisibility(false);
-		SheathComponent->SetVisibility(true);
+		FName SocketName = IsEquipped ? TEXT("katana3") : TEXT("katana1"); 
+		WeaponMeshComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
 	}
 }
 
+
 void AThirdPersonCharacter::AttackHitDetection()
 {
-	FVector StartLocation = DrawComponent->GetSocketLocation("Start");
-	FVector EndLocation = DrawComponent->GetSocketLocation("End");
+	FVector StartLocation = WeaponMeshComponent->GetSocketLocation("Start");
+	FVector EndLocation = WeaponMeshComponent->GetSocketLocation("End");
 
 	float Radius = 20.0f;
 	float HalfHeight = (EndLocation - StartLocation).Size() / 2;
-	FQuat Rotation = DrawComponent->GetSocketQuaternion("End");
+	FQuat Rotation = WeaponMeshComponent->GetSocketQuaternion("End");
 
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(this); // Ignore self
@@ -447,10 +452,19 @@ void AThirdPersonCharacter::ResetAttack()
 
 void AThirdPersonCharacter::UpdateSprint()
 {
+	// Get current character speed (not max speed)
+	float currentSpeed = GetCharacterMovement()->Velocity.Size();
+
+
 	if (stamina > 0)
 	{
-		stamina -= GetWorld()->GetDeltaSeconds() * sprintStaminaDrainRate;
+		if (currentSpeed == sprintSpeed) 
+		{
+			stamina -= GetWorld()->GetDeltaSeconds() * sprintStaminaDrainRate;
+		}
 	}
+	
+	
 	else
 	{
 		SetDefaultSpeed();
@@ -464,10 +478,12 @@ void AThirdPersonCharacter::RecoverStamina()
 	{
 		stamina += GetWorld()->GetDeltaSeconds() * staminaRecoveryRate;
 	}
-	else {
+	else 
+	{
 		stamina = maxStamina;
 		GetWorld()->GetTimerManager().ClearTimer(SprintTimerHandle);
 	}
+	
 }
 
 void AThirdPersonCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)

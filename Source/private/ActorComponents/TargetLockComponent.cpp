@@ -1,10 +1,12 @@
+
+#include "ActorComponents/TargetLockComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Math/Vector.h"
-#include "ActorComponents/TargetLockComponent.h"
 #include <InputTriggers.h>
 #include <EnhancedInputComponent.h>
 #include <Kismet/KismetMathLibrary.h>
 #include <Enemy/EnemyCharacter.h>
+#include <Kismet/GameplayStatics.h>
 
 
 
@@ -25,6 +27,13 @@ void UTargetLockComponent::BeginPlay()
 	UEnhancedInputComponent* playerInputComponent = Cast<UEnhancedInputComponent>(playerCharacter->InputComponent);
 	playerInputComponent->BindAction(TargetLockAction, ETriggerEvent::Triggered, this, &UTargetLockComponent::TargetLockOn);
 	playerInputComponent->BindAction(SwitchTargetLockAction, ETriggerEvent::Triggered, this, &UTargetLockComponent::SwitchTargetLock);
+
+	if (LockWidgetClass)
+	{
+		lockWidget = CreateWidget<UUserWidget>(GetWorld(), LockWidgetClass);
+		lockWidget->AddToViewport();
+		lockWidget->SetVisibility(ESlateVisibility::Hidden);
+	}
 }
 
 
@@ -87,7 +96,10 @@ TArray<AActor*> UTargetLockComponent::TraceForTarget()
 			{
 				// check if actor is child of lockOnClass
 				if (actor->IsA(lockOnClass)) {
-					actorsToReturn.Add(actor);
+					AEnemyCharacter* enemy = Cast<AEnemyCharacter>(actor);
+					if (enemy && !enemy->isDead()) {
+						actorsToReturn.Add(actor);
+					}
 				}
 			}
 		}
@@ -209,12 +221,28 @@ void UTargetLockComponent::UpdateTargetLock()
 	{
 		isLockedOn = false;
 		ChangeTargetActor(nullptr);
+
+		lockWidget->SetVisibility(ESlateVisibility::Hidden);
 		return;
 	}
 	else
 	{
-		if (!IsValid(targetActor)) {
-			isLockedOn = false;
+		AEnemyCharacter* enemy = Cast<AEnemyCharacter>(targetActor);
+		if (!IsValid(targetActor) || enemy->isDead()) {
+			AActor* newTarget = nullptr;
+			newTarget = GetTargetActorSwitch(TraceForTarget(), EDirection::Right);
+
+			if (playerCharacter->Debug) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("New Target: %s"), newTarget ? *newTarget->GetName() : TEXT("None")));
+
+			if (newTarget != nullptr) {
+				ChangeTargetActor(newTarget);
+			}
+			else
+			{
+				isLockedOn = false;
+				ChangeTargetActor(nullptr);
+				lockWidget->SetVisibility(ESlateVisibility::Hidden);
+			}
 			return;
 		}
 		FVector start = playerCharacter->GetActorLocation();
@@ -224,6 +252,8 @@ void UTargetLockComponent::UpdateTargetLock()
 
 		if (distance > lockOnDistance) {
 			isLockedOn = false;
+
+			lockWidget->SetVisibility(ESlateVisibility::Hidden);
 		}
 		else {
 			FRotator currentRotation = playerCharacter->GetController()->GetControlRotation();
@@ -241,6 +271,16 @@ void UTargetLockComponent::UpdateTargetLock()
 
 			// Set the rotation of the camera
 			playerCharacter->GetController()->SetControlRotation(newRotation);
+
+			APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+			// Set the lock widget location to the target actor
+			FVector2D screenLocation;
+			PlayerController->ProjectWorldLocationToScreen(targetActor->GetActorLocation(), screenLocation);
+			// Offset the widget by its half size
+			screenLocation -= FVector2D(lockWidget->GetDesiredSize().X / 2, lockWidget->GetDesiredSize().Y / 2);
+			lockWidget->SetPositionInViewport(screenLocation);
+
+			if (lockWidget->Visibility == ESlateVisibility::Hidden) lockWidget->SetVisibility(ESlateVisibility::Visible);
 		}
 	}
 
@@ -307,6 +347,7 @@ void UTargetLockComponent::ChangeTargetActor(AActor* newTarget)
 		SetLockTimer(false);
 		isLockedOn = false;
 		playerCharacter->SetOrientRotationToMovement(true);
+		lockWidget->SetVisibility(ESlateVisibility::Hidden);
 	}
 
 	targetActor = newTarget;

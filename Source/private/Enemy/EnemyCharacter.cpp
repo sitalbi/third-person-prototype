@@ -1,9 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Enemy/EnemyCharacter.h"
 #include <Kismet/GameplayStatics.h>
 #include <Kismet/KismetMathLibrary.h>
+#include "Components/CapsuleComponent.h"
 
 // Sets default values
 AEnemyCharacter::AEnemyCharacter()
@@ -39,7 +37,63 @@ void AEnemyCharacter::BeginPlay()
 		MontageDelegate.BindUObject(this, &AEnemyCharacter::AttackEnd);
 		AnimInstance->Montage_SetEndDelegate(MontageDelegate, AttackMontage);
 	}
+}
 
+void AEnemyCharacter::DestroyActor()
+{
+	Destroy();
+}
+
+void AEnemyCharacter::ActivateRagdoll()
+{
+	// Activate ragdoll
+	GetMesh()->SetSimulatePhysics(true);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetMesh()->SetAllBodiesSimulatePhysics(true);
+	GetMesh()->SetAllBodiesPhysicsBlendWeight(1.0f);
+	GetMesh()->bBlendPhysics = true;
+
+	// Destroy the actor
+	FTimerHandle TimerHandle;
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &AEnemyCharacter::DestroyActor, 5.0f, false);
+}
+
+void AEnemyCharacter::Death()
+{
+	// Stop the tick function
+	SetActorTickEnabled(false);
+	HealthBar->SetVisibility(false);
+	m_isDead = true;
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetSimulatePhysics(false);
+
+	if (GetController())
+	{
+		GetController()->UnPossess();
+	} 
+
+	if (DeathMontage) {
+		// rotate the enemy to face the player
+		FRotator NewRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorLocation());
+		SetActorRotation(FRotator(0.0f, NewRotation.Yaw, 0.0f));
+
+		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+		if (animInstance)
+		{
+			animInstance->Montage_Play(DeathMontage, 1.0);
+			// Define the section name
+			int sectionIndex = FMath::RandRange(1, 2);
+			FName section = FName(*FString::Printf(TEXT("Death%d"), sectionIndex));
+			animInstance->Montage_JumpToSection(section);
+
+			// Destroy the actor after the death animation section has finished
+			FTimerHandle TimerHandle;
+			GetWorldTimerManager().SetTimer(TimerHandle, this, &AEnemyCharacter::ActivateRagdoll, DeathMontage->GetSectionLength(sectionIndex-1), false);
+		}
+
+	}
 }
 
 // Called every frame
@@ -62,7 +116,7 @@ void AEnemyCharacter::Tick(float DeltaTime)
 	{
 		HealthBar->SetVisibility(true);
 	}
-	if(!isLockedOn && !animInstance->Montage_IsPlaying(HitMontage))
+	if(!isLockedOn && (animInstance && !animInstance->Montage_IsPlaying(HitMontage)))
 	{
 		HealthBar->SetVisibility(false);
 	}
@@ -85,7 +139,9 @@ float AEnemyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 		Health = fmax(Health, 0);
 		if (Health == 0)
 		{
-			Destroy();
+			if (!m_isDead) {
+				Death();
+			}
 		}
 	}
 
@@ -115,4 +171,9 @@ void AEnemyCharacter::Attack()
 void AEnemyCharacter::AttackEnd(UAnimMontage* Montage, bool bInterrupted)
 {
 	OnAttackMontageEnded.Broadcast();
+}
+
+bool AEnemyCharacter::isDead()
+{
+	return m_isDead;
 }

@@ -14,6 +14,7 @@
 #include "Enemy/MeleeHitInterface.h"
 #include <Kismet/GameplayStatics.h>
 #include <ActorComponents/TargetLockComponent.h>
+#include <Enemy/EnemyCharacter.h>
 #include <Kismet/KismetMathLibrary.h>
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -151,7 +152,7 @@ void AThirdPersonCharacter::Move(const FInputActionValue& Value)
 	{
 		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 		// if the character is attacking or drawing weapon, he can't move
-		if (!canAttack || IsPlayingMontage()) {
+		if ((!canAttack && !GetMovementComponent()->IsFalling()) || IsPlayingMontage()) {
 			return;
 		}
 
@@ -235,6 +236,7 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 
 	if (bAttack)
 	{
+		hit = false;
 		if (!IsEquipped) {
 			IsEquipped = true;
 			Equip();
@@ -336,7 +338,7 @@ void AThirdPersonCharacter::Roll(const FInputActionValue& Value)
 				}
 
 				RollDirection = GetLastMovementInputVector();
-				if (RollDirection.Size() < 0.1) {
+				if (RollDirection.Size() < 0) {
 					RollDirection = -GetActorForwardVector(); // Roll backwards if no input
 				}
 				// make the player face the direction of the input
@@ -365,7 +367,7 @@ void AThirdPersonCharacter::Roll(const FInputActionValue& Value)
 bool AThirdPersonCharacter::IsPlayingMontage()
 {
 	UAnimInstance * animInstance = GetMesh()->GetAnimInstance();
-	return animInstance->Montage_IsPlaying(AttackMontage) || animInstance->Montage_IsPlaying(DrawMontage) || animInstance->Montage_IsPlaying(JumpAttackMontage) || animInstance->Montage_IsPlaying(RollMontage);
+	return animInstance->Montage_IsPlaying(AttackMontage) || animInstance->Montage_IsPlaying(DrawMontage) || animInstance->Montage_IsPlaying(RollMontage);
 }
 
 void AThirdPersonCharacter::Equip()
@@ -406,6 +408,12 @@ void AThirdPersonCharacter::AttackHitDetection()
 	);
 
 	if (bHit) {
+		// HitStop effect
+		if (!hit) {
+			hit = true;
+			UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.1f);
+			GetWorld()->GetTimerManager().SetTimer(SlowMotionTimerHandle, this, &AThirdPersonCharacter::ResetTimeDilation, 0.015f, false);
+		}
 		AActor* HitActor = HitResult.GetActor();
 
 		float DamageAmount = WeaponDamage * AttackMultiplier;
@@ -422,6 +430,7 @@ void AThirdPersonCharacter::AttackHitDetection()
 				UDamageType::StaticClass()
 			);
 			MeleeHitActor->OnMeleeHit(HitResult);
+
 			
 		}
 	}
@@ -430,6 +439,10 @@ void AThirdPersonCharacter::AttackHitDetection()
 	if(Debug) DrawDebugCapsule(GetWorld(), (StartLocation + EndLocation) / 2, HalfHeight, Radius, Rotation, bHit ? FColor::Green : FColor::Red, false, 1.0f, 0, 1.0f);
 }
 
+void AThirdPersonCharacter::ResetTimeDilation()
+{
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+}
 
 // Not working for the moment the event seems to not be triggered
 void AThirdPersonCharacter::Landed(const FHitResult& Hit)
@@ -448,6 +461,7 @@ void AThirdPersonCharacter::ResetAttack()
 	canAttack = true;
 	AttackCount = 0;
 	AttackMultiplier = 1.0f;
+	hit = false;
 }
 
 void AThirdPersonCharacter::UpdateSprint()

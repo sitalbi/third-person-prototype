@@ -27,6 +27,8 @@ public:
 	UAnimMontage* HitMontage;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* AttackMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* DeathMontage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Details, meta = (AllowPrivateAccess = "true"))
 	FName Name;
@@ -51,10 +53,18 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	void DestroyActor();
+
+	void ActivateRagdoll();
+
+	void Death();
 	
 	int HitCount = 0;
 
 	UWidgetComponent* HealthBar;
+
+	bool m_isDead = false;
 
 public:
 	// override MeleeHitInterface
@@ -68,6 +78,8 @@ public:
 	virtual void Attack();
 
 	void AttackEnd(UAnimMontage* Montage, bool bInterrupted);
+
+	bool isDead();
 
 
 

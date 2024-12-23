@@ -185,6 +185,8 @@ protected:
 	void UpdateSprint();
 
 	void RecoverStamina();
+
+	void ResetTimeDilation();
 	
 	UStaticMeshComponent* WeaponMeshComponent;
 
@@ -204,6 +206,9 @@ protected:
 	FOnMontageEnded OnAttackEndDelegate;
 
 	FTimerHandle SprintTimerHandle;
+	FTimerHandle SlowMotionTimerHandle;
+
+	bool hit = false;
 
 
 	

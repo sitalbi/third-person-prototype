@@ -65,7 +65,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SwitchTargetLockAction;
 
+	UFUNCTION(BlueprintCallable)
 	FVector GetTargetLocation();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<class UUserWidget> LockWidgetClass;
 
 
 private:
@@ -83,6 +87,8 @@ private:
 	void ChangeTargetActor(AActor* newTarget);
 
 	bool isLockedOn = false;
+
+	UUserWidget* lockWidget;
 
 };
 

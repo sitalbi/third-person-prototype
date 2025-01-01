@@ -256,6 +256,7 @@ void UTargetLockComponent::UpdateTargetLock()
 			lockWidget->SetVisibility(ESlateVisibility::Hidden);
 		}
 		else {
+			
 			FRotator currentRotation = playerCharacter->GetController()->GetControlRotation();
 
 			FRotator targetRotation = GetLockOnRotation();
@@ -263,7 +264,6 @@ void UTargetLockComponent::UpdateTargetLock()
 			float deltaTime = GetWorld()->GetDeltaSeconds();
 			float interpSpeed = interpolationSpeed;
 			
-
 			FRotator newRotation = FMath::RInterpTo(currentRotation, targetRotation, deltaTime, interpSpeed);
 
 			// clamp the pitch to prevent the player from looking up or down too much

@@ -179,15 +179,25 @@ void AThirdPersonCharacter::Sprint(const FInputActionValue& Value)
 
 	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 
-	if (bSprint && !GetCharacterMovement()->IsFalling() && !IsPlayingMontage() && !TargetLockComponent->GetIsLockedOn())
+	if (bSprint && !GetCharacterMovement()->IsFalling() && !IsPlayingMontage())
 	{
+		isSprinting = true;
 		SetSpeed(sprintSpeed);
 		GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &AThirdPersonCharacter::UpdateSprint, GetWorld()->GetDeltaSeconds(), true);
+		if (TargetLockComponent->GetIsLockedOn())
+		{
+			SetOrientRotationToMovement(true);
+		}
 	}
 	else
 	{
+		isSprinting = false;
 		SetDefaultSpeed();
 		GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &AThirdPersonCharacter::RecoverStamina, GetWorld()->GetDeltaSeconds(), true, 1.0f);
+		if (TargetLockComponent->GetIsLockedOn())
+		{
+			SetOrientRotationToMovement(false);
+		}
 	}
 
 }
@@ -268,7 +278,12 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 				animInstance->Montage_SetEndDelegate(OnAttackEndDelegate, AttackMontage);
 
 				FName section = FName(*FString::Printf(TEXT("Attack%d"), AttackCount + 1));
-				animInstance->Montage_JumpToSection(section);
+				if (isSprinting) {
+					animInstance->Montage_JumpToSection("SprintAttack");
+				}
+				else { 
+					animInstance->Montage_JumpToSection(section); 
+				}
 				AttackCount = (AttackCount + 1) % animInstance->GetCurrentActiveMontage()->GetNumSections();
 			}
 			else {
@@ -338,7 +353,7 @@ void AThirdPersonCharacter::Roll(const FInputActionValue& Value)
 				}
 
 				RollDirection = GetLastMovementInputVector();
-				if (RollDirection.Size() < 0) {
+				if (RollDirection.Size() <= 0.1) {
 					RollDirection = -GetActorForwardVector(); // Roll backwards if no input
 				}
 				// make the player face the direction of the input
@@ -481,6 +496,7 @@ void AThirdPersonCharacter::UpdateSprint()
 	
 	else
 	{
+		isSprinting = false;
 		SetDefaultSpeed();
 		GetWorld()->GetTimerManager().ClearTimer(SprintTimerHandle);
 	}
@@ -558,4 +574,9 @@ bool AThirdPersonCharacter::GetIsRolling()
 	else {
 		return false;
 	}
+}
+
+bool AThirdPersonCharacter::GetIsSprinting()
+{
+	return isSprinting;
 }

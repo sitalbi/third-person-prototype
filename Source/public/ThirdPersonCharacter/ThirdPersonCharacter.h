@@ -149,6 +149,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool GetIsRolling();
 
+	UFUNCTION(BlueprintCallable)
+	bool GetIsSprinting();
+
 
 	void Equip();
 	void AttackHitDetection();
@@ -195,6 +198,8 @@ protected:
 	unsigned int AttackCount = 0;
 
 	bool canAttack = true;
+
+	bool isSprinting = false;
 
 	float AttackMultiplier = 1.0f;
 

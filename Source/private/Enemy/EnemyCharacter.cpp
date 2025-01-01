@@ -82,15 +82,11 @@ void AEnemyCharacter::Death()
 		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 		if (animInstance)
 		{
-			animInstance->Montage_Play(DeathMontage, 1.0);
-			// Define the section name
-			int sectionIndex = FMath::RandRange(1, 2);
-			FName section = FName(*FString::Printf(TEXT("Death%d"), sectionIndex));
-			animInstance->Montage_JumpToSection(section);
+			ActivateRagdoll();
 
-			// Destroy the actor after the death animation section has finished
-			FTimerHandle TimerHandle;
-			GetWorldTimerManager().SetTimer(TimerHandle, this, &AEnemyCharacter::ActivateRagdoll, DeathMontage->GetSectionLength(sectionIndex-1), false);
+			// add force in the direction of the attack
+			FVector Force = -GetActorForwardVector() * 5000000.0f;
+			GetMesh()->AddForce(Force);
 		}
 
 	}

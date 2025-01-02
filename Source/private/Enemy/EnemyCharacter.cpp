@@ -8,7 +8,6 @@ AEnemyCharacter::AEnemyCharacter()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
 }
 
 // Called when the game starts or when spawned
@@ -119,6 +118,11 @@ void AEnemyCharacter::Tick(float DeltaTime)
 	 
 }
 
+bool AEnemyCharacter::IsKnockedDown()
+{
+	return isKnockedDown;
+}
+
 
 void AEnemyCharacter::OnMeleeHit(FHitResult HitResult)
 {
@@ -129,7 +133,7 @@ void AEnemyCharacter::OnMeleeHit(FHitResult HitResult)
 float AEnemyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
-	if (animInstance && !animInstance->Montage_IsPlaying(HitMontage))
+	if (animInstance && !animInstance->Montage_IsPlaying(HitMontage) && !animInstance->Montage_IsPlaying(KnockdownMontage))
 	{
 		Health -= DamageAmount;
 		Health = fmax(Health, 0);

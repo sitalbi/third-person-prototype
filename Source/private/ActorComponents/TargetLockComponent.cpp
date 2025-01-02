@@ -1,5 +1,6 @@
 
 #include "ActorComponents/TargetLockComponent.h"
+#include "ActorComponents/CustomCharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Math/Vector.h"
 #include <InputTriggers.h>
@@ -339,15 +340,22 @@ void UTargetLockComponent::ChangeTargetActor(AActor* newTarget)
 		Cast<AEnemyCharacter>(newTarget)->SetIsLockedOn(true);
 		isLockedOn = true;
 		SetLockTimer(true);
-		playerCharacter->SetDefaultSpeed();
-		playerCharacter->SetOrientRotationToMovement(false);
+		UCustomCharacterMovementComponent* customMovement = Cast<UCustomCharacterMovementComponent>(playerCharacter->GetCharacterMovement());
+		if (customMovement)
+		{
+			customMovement->SetOrientationToMovement(false);
+		}
 	}
 	else
 	{
 		SetLockTimer(false);
 		isLockedOn = false;
-		playerCharacter->SetOrientRotationToMovement(true);
 		lockWidget->SetVisibility(ESlateVisibility::Hidden);
+		UCustomCharacterMovementComponent* customMovement = Cast<UCustomCharacterMovementComponent>(playerCharacter->GetCharacterMovement());
+		if (customMovement)
+		{
+			customMovement->SetOrientationToMovement(true);
+		}
 	}
 
 	targetActor = newTarget;

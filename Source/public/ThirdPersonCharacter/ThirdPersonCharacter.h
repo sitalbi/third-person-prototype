@@ -16,6 +16,7 @@ class UInputAction;
 struct FInputActionValue;
 
 class UTargetLockComponent;
+class UCustomCharacterMovementComponent;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -44,10 +45,6 @@ class AThirdPersonCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* MoveAction;
 
-	/** Sprint Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* SprintAction;
-
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
@@ -64,14 +61,6 @@ class AThirdPersonCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* HeavyAttackAction;
 
-	/** Roll Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* RollAction;
-
-	
-
-
-	
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* DrawMontage;
@@ -84,9 +73,6 @@ class AThirdPersonCharacter : public ACharacter
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* HeavyAttackMontage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
-	UAnimMontage* RollMontage;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
 	UStaticMesh* WeaponMesh;
@@ -105,67 +91,41 @@ public:
 	bool Debug = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
-	float defaultSpeed = 500.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
-	float sprintSpeed = 800.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	float heavyAttackMultiplier = 1.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
 	float maxHealth = 100.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
-	float maxStamina = 80.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
 	float health = 100.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
-	float stamina = 80.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
-	float sprintStaminaDrainRate = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
-	float staminaRecoveryRate = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
-	float rollStaminaDrain = 1.0f;
 
 	UFUNCTION(BlueprintCallable)
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+	UFUNCTION(BlueprintCallable)
+	void OnJumpAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-	void SetSpeed(float speed);
-	void SetDefaultSpeed();
 	void SetCanAttack();
-
-	void SetOrientRotationToMovement(bool orientation);
+	void SetCanMove();
 
 	UFUNCTION(BlueprintCallable)
 	bool GetIsEquipped();
 
-	UFUNCTION(BlueprintCallable)
-	bool GetIsRolling();
-
-	UFUNCTION(BlueprintCallable)
-	bool GetIsSprinting();
-
-
 	void Equip();
 	void AttackHitDetection();
-	
-	virtual void Landed(const FHitResult& Hit) override;
 
+	UFUNCTION(BlueprintCallable)
+	bool IsTargetLocked();
 
 protected:
+	// override Jump function
+	virtual void Jump() override;
+
+	bool CanJump() const;
+
+	bool CanMove() const;
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
-
-	/** Called for sprint input */
-	void Sprint(const FInputActionValue& Value);
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
@@ -177,31 +137,27 @@ protected:
 	void Attack(const FInputActionValue& Value);
 	void HeavyAttack(const FInputActionValue& Value);
 
-	/** Called for rolling input */
-	void Roll(const FInputActionValue& Value);
-
 	/** Check for animation playing */
-	bool IsPlayingMontage();
+	bool IsPlayingMontage() const;
 
 	void ResetAttack();
 
-	void UpdateSprint();
-
-	void RecoverStamina();
-
 	void ResetTimeDilation();
+
+	void Landed(const FHitResult& Hit);
 	
 	UStaticMeshComponent* WeaponMeshComponent;
 
 	UTargetLockComponent* TargetLockComponent;
 
+	UCustomCharacterMovementComponent* CustomCharacterMovementComponent;
+
 	unsigned int AttackCount = 0;
 
 	bool canAttack = true;
-
-	bool isSprinting = false;
-
 	float AttackMultiplier = 1.0f;
+
+	bool canMove = true;
 
 	bool IsEquipped = false;
 	bool isRolling = false;
@@ -209,15 +165,12 @@ protected:
 	FVector RollDirection;
 
 	FOnMontageEnded OnAttackEndDelegate;
+	FOnMontageEnded OnJumpAttackEndDelegate;
 
-	FTimerHandle SprintTimerHandle;
+
 	FTimerHandle SlowMotionTimerHandle;
 
 	bool hit = false;
-
-
-	
-
 
 protected:
 	// APawn interface

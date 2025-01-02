@@ -5,7 +5,6 @@
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Controller.h"
 #include "EnhancedInputComponent.h"
@@ -14,6 +13,7 @@
 #include "Enemy/MeleeHitInterface.h"
 #include <Kismet/GameplayStatics.h>
 #include <ActorComponents/TargetLockComponent.h>
+#include <ActorComponents/CustomCharacterMovementComponent.h>
 #include <Enemy/EnemyCharacter.h>
 #include <Kismet/KismetMathLibrary.h>
 
@@ -88,6 +88,8 @@ void AThirdPersonCharacter::BeginPlay()
 	WeaponMeshComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	
 	TargetLockComponent = Cast<UTargetLockComponent>(GetComponentByClass(UTargetLockComponent::StaticClass()));
+	
+	CustomCharacterMovementComponent = Cast<UCustomCharacterMovementComponent>(GetCharacterMovement());
 
 	// Debug
 	if (TargetLockComponent) {
@@ -98,7 +100,6 @@ void AThirdPersonCharacter::BeginPlay()
 	}
 
 	health = maxHealth;
-	stamina = maxStamina;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -110,15 +111,11 @@ void AThirdPersonCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 		
 		// Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AThirdPersonCharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AThirdPersonCharacter::Move);
-
-		// Sprinting
-		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AThirdPersonCharacter::Sprint);
-		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AThirdPersonCharacter::Sprint);
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AThirdPersonCharacter::Look);
@@ -132,10 +129,6 @@ void AThirdPersonCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 		// Heavy Attack
 		EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Started, this, &AThirdPersonCharacter::HeavyAttack);
 		EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Completed, this, &AThirdPersonCharacter::HeavyAttack);
-
-		// Roll
-		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Triggered, this, &AThirdPersonCharacter::Roll);
-	
 	}
 	else
 	{
@@ -143,19 +136,31 @@ void AThirdPersonCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	}
 }
 
+void AThirdPersonCharacter::Jump()
+{
+	if (CanJump())
+	{
+		Super::Jump();
+	}
+}
+
+bool AThirdPersonCharacter::CanJump() const
+{
+	return Super::CanJump() && canAttack && !GetMovementComponent()->IsFalling() && !IsPlayingMontage();
+}
+
+bool AThirdPersonCharacter::CanMove() const
+{
+	return canMove;
+}
+
 void AThirdPersonCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
-	if (Controller != nullptr)
+	if (Controller != nullptr && CanMove())
 	{
-		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
-		// if the character is attacking or drawing weapon, he can't move
-		if ((!canAttack && !GetMovementComponent()->IsFalling()) || IsPlayingMontage()) {
-			return;
-		}
-
 		// find out which way is forward
 		const FRotator YawRotation(0, Controller->GetControlRotation().Yaw, 0);
 
@@ -172,43 +177,13 @@ void AThirdPersonCharacter::Move(const FInputActionValue& Value)
 	}
 }
 
-void AThirdPersonCharacter::Sprint(const FInputActionValue& Value)
-{
-	// input is a boolean
-	bool bSprint = Value.Get<bool>();
-
-	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
-
-	if (bSprint && !GetCharacterMovement()->IsFalling() && !IsPlayingMontage())
-	{
-		isSprinting = true;
-		SetSpeed(sprintSpeed);
-		GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &AThirdPersonCharacter::UpdateSprint, GetWorld()->GetDeltaSeconds(), true);
-		if (TargetLockComponent->GetIsLockedOn())
-		{
-			SetOrientRotationToMovement(true);
-		}
-	}
-	else
-	{
-		isSprinting = false;
-		SetDefaultSpeed();
-		GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &AThirdPersonCharacter::RecoverStamina, GetWorld()->GetDeltaSeconds(), true, 1.0f);
-		if (TargetLockComponent->GetIsLockedOn())
-		{
-			SetOrientRotationToMovement(false);
-		}
-	}
-
-}
-
 
 void AThirdPersonCharacter::Look(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
-	if (Controller != nullptr && !TargetLockComponent->GetIsLockedOn())
+	if (Controller != nullptr && !IsTargetLocked())
 	{
 		// add yaw and pitch input to controller
 		AddControllerYawInput(LookAxisVector.X);
@@ -253,7 +228,7 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 		}
 
 		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
-		if (canAttack && animInstance && !animInstance->Montage_IsPlaying(RollMontage)) {  // Ensure animInstance is valid
+		if (canAttack) {
 			// make the player face the direction of the input
 			if (Controller != nullptr)
 			{
@@ -278,13 +253,14 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 				animInstance->Montage_SetEndDelegate(OnAttackEndDelegate, AttackMontage);
 
 				FName section = FName(*FString::Printf(TEXT("Attack%d"), AttackCount + 1));
-				if (isSprinting) {
+				if (CustomCharacterMovementComponent->IsSprinting()) {
 					animInstance->Montage_JumpToSection("SprintAttack");
+					CustomCharacterMovementComponent->StopSprint();
 				}
 				else { 
 					animInstance->Montage_JumpToSection(section); 
 				}
-				AttackCount = (AttackCount + 1) % animInstance->GetCurrentActiveMontage()->GetNumSections();
+				AttackCount = (AttackCount + 1) % (animInstance->GetCurrentActiveMontage()->GetNumSections()-1);
 			}
 			else {
 				canAttack = false;
@@ -298,7 +274,6 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 void AThirdPersonCharacter::HeavyAttack(const FInputActionValue& Value) {
 	bool bHeavyAttack = Value.Get<bool>();
 
-	UE_LOG(LogTemp, Warning, TEXT("Heavy Attack: %d"), bHeavyAttack);
 
 	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 	if (bHeavyAttack)
@@ -320,7 +295,6 @@ void AThirdPersonCharacter::HeavyAttack(const FInputActionValue& Value) {
 			{
 				CurrentSectionName = MontageInstance->GetCurrentSection().ToString();
 			}
-			UE_LOG(LogTemp, Warning, TEXT("Current Section: %s"), *CurrentSectionName);
 			if (CurrentSectionName.Equals("Mid")) {
 				OnAttackEndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
 				animInstance->Montage_SetEndDelegate(OnAttackEndDelegate, AttackMontage);
@@ -336,53 +310,10 @@ void AThirdPersonCharacter::HeavyAttack(const FInputActionValue& Value) {
 	}
 }
 
-void AThirdPersonCharacter::Roll(const FInputActionValue& Value)
+bool AThirdPersonCharacter::IsPlayingMontage() const
 {
-	// input is a boolean
-	bool bRoll = Value.Get<bool>();
-
-	if (bRoll && !GetCharacterMovement()->IsFalling() && (stamina > 0))
-	{
-		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
-		if (animInstance) {
-			if (!animInstance->Montage_IsPlaying(RollMontage) && canAttack) {
-				float montagePlayRate = 1.0f;
-				if (stamina < rollStaminaDrain) {
-					// max between 0.5 and stamina/rollStaminaDrain
-					montagePlayRate = FMath::Max(0.6f, stamina / rollStaminaDrain);
-				}
-
-				RollDirection = GetLastMovementInputVector();
-				if (RollDirection.Size() <= 0.1) {
-					RollDirection = -GetActorForwardVector(); // Roll backwards if no input
-				}
-				// make the player face the direction of the input
-				FRotator NewRotation = RollDirection.Rotation();
-				NewRotation.Pitch = 0; // Ensure we only rotate around the Yaw axis
-				SetActorRotation(NewRotation);
-
-				animInstance->Montage_Play(RollMontage, montagePlayRate);
-				animInstance->Montage_JumpToSection("RollF");
-
-
-				stamina -= rollStaminaDrain;
-
-				if (GetCharacterMovement()->MaxWalkSpeed == defaultSpeed) {
-					GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &AThirdPersonCharacter::RecoverStamina, GetWorld()->GetDeltaSeconds(), true, 1.0f);
-				}
-				else {
-					GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &AThirdPersonCharacter::UpdateSprint, GetWorld()->GetDeltaSeconds(), true, 0.5f);
-				}
-			}
-			
-		}
-	}
-}
-
-bool AThirdPersonCharacter::IsPlayingMontage()
-{
-	UAnimInstance * animInstance = GetMesh()->GetAnimInstance();
-	return animInstance->Montage_IsPlaying(AttackMontage) || animInstance->Montage_IsPlaying(DrawMontage) || animInstance->Montage_IsPlaying(RollMontage);
+	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+	return animInstance->Montage_IsPlaying(AttackMontage) || animInstance->Montage_IsPlaying(DrawMontage);
 }
 
 void AThirdPersonCharacter::Equip()
@@ -454,12 +385,21 @@ void AThirdPersonCharacter::AttackHitDetection()
 	if(Debug) DrawDebugCapsule(GetWorld(), (StartLocation + EndLocation) / 2, HalfHeight, Radius, Rotation, bHit ? FColor::Green : FColor::Red, false, 1.0f, 0, 1.0f);
 }
 
+bool AThirdPersonCharacter::IsTargetLocked()
+{
+	if (TargetLockComponent) {
+		return TargetLockComponent->GetIsLockedOn();
+	}
+	return false;
+}
+
+
+
 void AThirdPersonCharacter::ResetTimeDilation()
 {
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
 }
 
-// Not working for the moment the event seems to not be triggered
 void AThirdPersonCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
@@ -468,6 +408,11 @@ void AThirdPersonCharacter::Landed(const FHitResult& Hit)
 		animInstance->Montage_Play(JumpAttackMontage, 1.0f);
 		animInstance->Montage_JumpToSection("Land");
 		ResetAttack();
+		canMove = false;
+		// Set delegate to reset canMove after landing
+		OnJumpAttackEndDelegate.BindUObject(this, &AThirdPersonCharacter::OnJumpAttackMontageEnded);
+		animInstance->Montage_SetEndDelegate(OnJumpAttackEndDelegate, JumpAttackMontage);
+
 	}
 }
 
@@ -479,64 +424,17 @@ void AThirdPersonCharacter::ResetAttack()
 	hit = false;
 }
 
-void AThirdPersonCharacter::UpdateSprint()
-{
-	// Get current character speed (not max speed)
-	float currentSpeed = GetCharacterMovement()->Velocity.Size();
-
-
-	if (stamina > 0)
-	{
-		if (currentSpeed == sprintSpeed) 
-		{
-			stamina -= GetWorld()->GetDeltaSeconds() * sprintStaminaDrainRate;
-		}
-	}
-	
-	
-	else
-	{
-		isSprinting = false;
-		SetDefaultSpeed();
-		GetWorld()->GetTimerManager().ClearTimer(SprintTimerHandle);
-	}
-}
-
-void AThirdPersonCharacter::RecoverStamina()
-{
-	if (stamina < maxStamina)
-	{
-		stamina += GetWorld()->GetDeltaSeconds() * staminaRecoveryRate;
-	}
-	else 
-	{
-		stamina = maxStamina;
-		GetWorld()->GetTimerManager().ClearTimer(SprintTimerHandle);
-	}
-	
-}
-
 void AThirdPersonCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	if (bInterrupted)
+	if (!bInterrupted)
 	{
-		UE_LOG(LogTemplateCharacter, Warning, TEXT("Attack Montage Interrupted"));
-	}
-	else
-	{
-		UE_LOG(LogTemplateCharacter, Warning, TEXT("Attack Montage Ended"));
 		ResetAttack();
 	}
 }
 
-void AThirdPersonCharacter::SetSpeed(float speed)
+void AThirdPersonCharacter::OnJumpAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	GetCharacterMovement()->MaxWalkSpeed = speed;
-}
-
-void AThirdPersonCharacter::SetDefaultSpeed()
-{
-	GetCharacterMovement()->MaxWalkSpeed = defaultSpeed;
+	SetCanMove();
 }
 
 void AThirdPersonCharacter::SetCanAttack()
@@ -544,39 +442,12 @@ void AThirdPersonCharacter::SetCanAttack()
 	this->canAttack = true;
 }
 
-void AThirdPersonCharacter::SetOrientRotationToMovement(bool orientation)
+void AThirdPersonCharacter::SetCanMove()
 {
-	UCharacterMovementComponent* const MovementComponent = GetCharacterMovement();
-	if (MovementComponent)
-	{
-		if (orientation) {
-			MovementComponent->bOrientRotationToMovement = true;
-			MovementComponent->bUseControllerDesiredRotation = false;
-		}
-		else {
-			MovementComponent->bOrientRotationToMovement = false;
-			MovementComponent->bUseControllerDesiredRotation = true;
-		}
-	}
+	this->canMove = true;
 }
 
 bool AThirdPersonCharacter::GetIsEquipped()
 {
 	return IsEquipped;
-}
-
-bool AThirdPersonCharacter::GetIsRolling()
-{
-	UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
-	if (animInstance) {
-		return animInstance->Montage_IsPlaying(RollMontage);
-	}
-	else {
-		return false;
-	}
-}
-
-bool AThirdPersonCharacter::GetIsSprinting()
-{
-	return isSprinting;
 }

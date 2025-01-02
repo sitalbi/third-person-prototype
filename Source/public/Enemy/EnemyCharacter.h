@@ -23,12 +23,17 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(BlueprintCallable)
+	bool IsKnockedDown();
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* HitMontage;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* AttackMontage;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* DeathMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* KnockdownMontage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Details, meta = (AllowPrivateAccess = "true"))
 	FName Name;
@@ -42,8 +47,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	float AttackBaseDamage;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	float KnockdownDamageThreshold;
 
 	bool isLockedOn = false;
+
+	bool isKnockedDown = false;
 
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttackEnded);
 	UPROPERTY(BlueprintAssignable, Category = "Combat")
@@ -62,9 +71,13 @@ protected:
 	
 	int HitCount = 0;
 
+	int KnockdownCount = 0;
+
 	UWidgetComponent* HealthBar;
 
 	bool m_isDead = false;
+
+	FTimerHandle KnockdownTimerHandle;
 
 public:
 	// override MeleeHitInterface

@@ -21,4 +21,12 @@ public:
 	virtual void OnMeleeHit(FHitResult HitResult) override;
 
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+private:
+
+	void EndKnockdown();
+
+	void ResetKnockDown(UAnimMontage* Montage, bool bInterrupted);
+
+	FOnMontageEnded OnKnockdownEndDelegate;
 };

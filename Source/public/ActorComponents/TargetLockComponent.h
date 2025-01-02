@@ -72,6 +72,7 @@ public:
 	TSubclassOf<class UUserWidget> LockWidgetClass;
 
 
+
 private:
 
 	FTimerHandle TargetLockTimerHandle;

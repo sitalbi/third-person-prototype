@@ -22,8 +22,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* DashAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* DashMontage;
 
-	bool IsSprinting() const { return bIsSprinting; }
+
+	bool IsSprinting() const { 
+		return bIsSprinting && Velocity.Size() > DefaultSpeed;
+	}
+	bool IsDashing() const { 
+		return bIsDashing; 
+	}
 
 	void StartSprint();
 	void StopSprint();
@@ -49,7 +57,13 @@ protected:
 	float StaminaRecoveryRate = 1.0f;						   
 															   
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats)
-	float RollStaminaDrain = 1.0f;
+	float DodgeStaminaDrain = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats)
+	float DashCooldown = 0.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats)
+	float DashForce = 1000.0f;
 
 	bool bIsSprinting;
 
@@ -63,7 +77,11 @@ private:
 	void RecoverStamina();
 
 	void Dash();
+	void ResetDash();
+
+	bool bIsDashing;
 
 
 	FTimerHandle SprintTimerHandle;
+	FTimerHandle DashTimerHandle;
 };

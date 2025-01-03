@@ -83,6 +83,10 @@ class AThirdPersonCharacter : public ACharacter
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
 	UBoxComponent* WeaponCollision;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UCameraShakeBase> CameraShake;
+
+
 
 public:
 	AThirdPersonCharacter();
@@ -93,10 +97,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	float heavyAttackMultiplier = 1.5f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	float sprintAttackMultiplier = 1.25f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
 	float maxHealth = 100.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
 	float health = 100.0f;
+
 
 	UFUNCTION(BlueprintCallable)
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);

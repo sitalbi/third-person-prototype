@@ -256,6 +256,7 @@ void AThirdPersonCharacter::Attack(const FInputActionValue& Value)
 				if (CustomCharacterMovementComponent->IsSprinting()) {
 					animInstance->Montage_JumpToSection("SprintAttack");
 					CustomCharacterMovementComponent->StopSprint();
+					AttackMultiplier = sprintAttackMultiplier;
 				}
 				else { 
 					animInstance->Montage_JumpToSection(section); 
@@ -297,7 +298,7 @@ void AThirdPersonCharacter::HeavyAttack(const FInputActionValue& Value) {
 			}
 			if (CurrentSectionName.Equals("Mid")) {
 				OnAttackEndDelegate.BindUObject(this, &AThirdPersonCharacter::OnAttackMontageEnded);
-				animInstance->Montage_SetEndDelegate(OnAttackEndDelegate, AttackMontage);
+				animInstance->Montage_SetEndDelegate(OnAttackEndDelegate, HeavyAttackMontage);
 				animInstance->Montage_Play(HeavyAttackMontage, 1.0f);
 				animInstance->Montage_JumpToSection("End");
 				AttackMultiplier = heavyAttackMultiplier;
@@ -357,12 +358,19 @@ void AThirdPersonCharacter::AttackHitDetection()
 		// HitStop effect
 		if (!hit) {
 			hit = true;
-			UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.1f);
-			GetWorld()->GetTimerManager().SetTimer(SlowMotionTimerHandle, this, &AThirdPersonCharacter::ResetTimeDilation, 0.015f, false);
+			UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.015f);
+			GetWorld()->GetTimerManager().SetTimer(SlowMotionTimerHandle, this, &AThirdPersonCharacter::ResetTimeDilation, 0.0015f, false);
+			//CameraShake
+			if (CameraShake) {
+				UGameplayStatics::GetPlayerController(this, 0)->ClientStartCameraShake(CameraShake);
+			}
 		}
 		AActor* HitActor = HitResult.GetActor();
 
 		float DamageAmount = WeaponDamage * AttackMultiplier;
+
+		UE_LOG(LogTemp, Warning, TEXT("WeaponDamage: %f"), WeaponDamage);
+		UE_LOG(LogTemp, Warning, TEXT("AttackMult: %f"), AttackMultiplier);
 		
 		IMeleeHitInterface* MeleeHitActor = Cast<IMeleeHitInterface>(HitActor);
 		if (MeleeHitActor) {
@@ -376,8 +384,6 @@ void AThirdPersonCharacter::AttackHitDetection()
 				UDamageType::StaticClass()
 			);
 			MeleeHitActor->OnMeleeHit(HitResult);
-
-			
 		}
 	}
 
@@ -422,6 +428,7 @@ void AThirdPersonCharacter::ResetAttack()
 	AttackCount = 0;
 	AttackMultiplier = 1.0f;
 	hit = false;
+	UE_LOG(LogTemp, Warning, TEXT("Attack Reset"));
 }
 
 void AThirdPersonCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
@@ -429,6 +436,12 @@ void AThirdPersonCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bIn
 	if (!bInterrupted)
 	{
 		ResetAttack();
+	}
+	else {
+		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+		if (!animInstance->Montage_IsPlaying(AttackMontage)) {
+			ResetAttack();
+		}
 	}
 }
 

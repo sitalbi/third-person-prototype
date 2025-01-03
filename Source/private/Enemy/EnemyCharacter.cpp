@@ -21,11 +21,7 @@ void AEnemyCharacter::BeginPlay()
 	HealthBar = FindComponentByClass<UWidgetComponent>();
 
 	if (HealthBar) {
-		UE_LOG(LogTemp, Warning, TEXT("HealthBar Found"));
 		HealthBar->SetVisibility(false);
-	}
-	else {
-		UE_LOG(LogTemp, Warning, TEXT("HealthBar Not Found"));
 	}
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -84,7 +80,7 @@ void AEnemyCharacter::Death()
 			ActivateRagdoll();
 
 			// add force in the direction of the attack
-			FVector Force = -GetActorForwardVector() * 5000000.0f;
+			FVector Force = -GetActorForwardVector() * 3500000.0f;
 			GetMesh()->AddForce(Force);
 		}
 

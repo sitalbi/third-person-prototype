@@ -58,6 +58,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Combat")
 	FOnAttackEnded OnAttackMontageEnded;
 
+	// Declare Event On Damage Taken
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDamageTaken);
+	UPROPERTY(BlueprintAssignable, Category = "Combat")
+	FOnDamageTaken OnDamageTaken;
+
 
 protected:
 	// Called when the game starts or when spawned

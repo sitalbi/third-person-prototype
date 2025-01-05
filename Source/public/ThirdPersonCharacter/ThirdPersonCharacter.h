@@ -7,6 +7,7 @@
 #include <Components/BoxComponent.h>
 #include <GameFramework/Character.h>
 #include "Logging/LogMacros.h"
+#include "Components/TimelineComponent.h"
 #include "ThirdPersonCharacter.generated.h"
 
 class USpringArmComponent;
@@ -94,6 +95,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Debug, meta = (AllowPrivateAccess = "true"))
 	bool Debug = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Attack, meta = (AllowPrivateAccess = "true"))
+	UCurveFloat* TimeDilationCurve;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	float heavyAttackMultiplier = 1.5f;
 
@@ -152,6 +156,11 @@ protected:
 
 	void ResetTimeDilation();
 
+	UFUNCTION()
+	void HandleTimeDilation(float value);
+
+	void TriggerSlowMotion();
+
 	void Landed(const FHitResult& Hit);
 	
 	UStaticMeshComponent* WeaponMeshComponent;
@@ -175,8 +184,9 @@ protected:
 	FOnMontageEnded OnAttackEndDelegate;
 	FOnMontageEnded OnJumpAttackEndDelegate;
 
-
 	FTimerHandle SlowMotionTimerHandle;
+
+	UTimelineComponent* TimeDilationTimeline;
 
 	bool hit = false;
 

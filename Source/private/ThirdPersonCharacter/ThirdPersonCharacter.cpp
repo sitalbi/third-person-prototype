@@ -56,6 +56,8 @@ AThirdPersonCharacter::AThirdPersonCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
+	TimeDilationTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("TimeDilationTimeline"));
+
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 	
@@ -91,15 +93,18 @@ void AThirdPersonCharacter::BeginPlay()
 	
 	CustomCharacterMovementComponent = Cast<UCustomCharacterMovementComponent>(GetCharacterMovement());
 
-	// Debug
-	if (TargetLockComponent) {
-		UE_LOG(LogTemp, Warning, TEXT("TargetLockComponent found"));
-	}
-	else {
-		UE_LOG(LogTemp, Warning, TEXT("TargetLockComponent not found"));
-	}
-
 	health = maxHealth;
+
+	if (TimeDilationCurve)
+	{
+		FOnTimelineFloat ProgressFunction;
+		ProgressFunction.BindUFunction(this, FName("HandleTimeDilation"));
+
+		TimeDilationTimeline->AddInterpFloat(TimeDilationCurve, ProgressFunction);
+		// Timeline Ignore Time Dilation
+		TimeDilationTimeline->SetIgnoreTimeDilation(true);
+		TimeDilationTimeline->SetTimelineLength(TimeDilationCurve->FloatCurve.GetLastKey().Time);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -284,6 +289,11 @@ void AThirdPersonCharacter::HeavyAttack(const FInputActionValue& Value) {
 			Equip();
 		}
 		if (canAttack) {
+			if (TargetLockComponent->GetIsLockedOn()) {
+				FRotator NewRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetLockComponent->GetTargetLocation());
+				NewRotation.Pitch = 0; // Ensure we only rotate around the Yaw axis
+				SetActorRotation(NewRotation);
+			}
 			canAttack = false;
 			animInstance->Montage_Play(HeavyAttackMontage, 1.0f);
 		}
@@ -358,8 +368,7 @@ void AThirdPersonCharacter::AttackHitDetection()
 		// HitStop effect
 		if (!hit) {
 			hit = true;
-			UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.015f);
-			GetWorld()->GetTimerManager().SetTimer(SlowMotionTimerHandle, this, &AThirdPersonCharacter::ResetTimeDilation, 0.0015f, false);
+			TriggerSlowMotion();
 			//CameraShake
 			if (CameraShake) {
 				UGameplayStatics::GetPlayerController(this, 0)->ClientStartCameraShake(CameraShake);
@@ -404,6 +413,22 @@ bool AThirdPersonCharacter::IsTargetLocked()
 void AThirdPersonCharacter::ResetTimeDilation()
 {
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+}
+
+void AThirdPersonCharacter::HandleTimeDilation(float value)
+{
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), value);
+}
+
+void AThirdPersonCharacter::TriggerSlowMotion()
+{
+	if (TimeDilationTimeline)
+	{
+		if (!TimeDilationTimeline->IsPlaying())
+		{
+			TimeDilationTimeline->PlayFromStart();
+		}
+	}
 }
 
 void AThirdPersonCharacter::Landed(const FHitResult& Hit)

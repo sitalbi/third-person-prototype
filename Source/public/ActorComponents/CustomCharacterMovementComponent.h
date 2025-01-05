@@ -84,4 +84,5 @@ private:
 
 	FTimerHandle SprintTimerHandle;
 	FTimerHandle DashTimerHandle;
+	FTimerHandle RecoverStaminaTimerHandle;
 };

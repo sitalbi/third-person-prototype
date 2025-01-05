@@ -23,12 +23,17 @@ void UCustomCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTic
 
 void UCustomCharacterMovementComponent::StartSprint()
 {
-	this->MaxWalkSpeed = SprintSpeed;
-	bIsSprinting = true;
-	GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &UCustomCharacterMovementComponent::UpdateSprint, GetWorld()->GetDeltaSeconds(), true, 1.0f);
-	if (player->IsTargetLocked())
+	if (Stamina > 0)
 	{
-		SetOrientationToMovement(true);
+		this->MaxWalkSpeed = SprintSpeed;
+		bIsSprinting = true;
+		GetWorld()->GetTimerManager().ClearTimer(DashTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(RecoverStaminaTimerHandle);
+		GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &UCustomCharacterMovementComponent::UpdateSprint, GetWorld()->GetDeltaSeconds(), true, 0.0f);
+		if (player->IsTargetLocked())
+		{
+			SetOrientationToMovement(true);
+		}
 	}
 }
 
@@ -36,7 +41,8 @@ void UCustomCharacterMovementComponent::StopSprint()
 {
 	this->MaxWalkSpeed = DefaultSpeed;
 	bIsSprinting = false;
-	GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &UCustomCharacterMovementComponent::RecoverStamina, GetWorld()->GetDeltaSeconds(), true, 1.0f);
+	GetWorld()->GetTimerManager().ClearTimer(SprintTimerHandle);
+	GetWorld()->GetTimerManager().SetTimer(RecoverStaminaTimerHandle, this, &UCustomCharacterMovementComponent::RecoverStamina, GetWorld()->GetDeltaSeconds(), true, 0.0f);
 	if (player->IsTargetLocked())
 	{
 		SetOrientationToMovement(false);
@@ -73,13 +79,16 @@ void UCustomCharacterMovementComponent::RecoverStamina()
 	else
 	{
 		Stamina = MaxStamina;
-		GetWorld()->GetTimerManager().ClearTimer(SprintTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(RecoverStaminaTimerHandle);
 	}
 }
 
 void UCustomCharacterMovementComponent::Dash()
 {
 	if (!bIsDashing && Stamina - DodgeStaminaDrain > 0) {
+		GetWorld()->GetTimerManager().ClearTimer(SprintTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(RecoverStaminaTimerHandle);
+
 		UAnimInstance* animInstance = player->GetMesh()->GetAnimInstance();
 		if (DashMontage) {
 			if (!IsFalling()) {
@@ -106,6 +115,13 @@ void UCustomCharacterMovementComponent::Dash()
 void UCustomCharacterMovementComponent::ResetDash()
 {
 	bIsDashing = false;
+	GetWorld()->GetTimerManager().ClearTimer(DashTimerHandle);
+	if (bIsSprinting) {
+		GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &UCustomCharacterMovementComponent::UpdateSprint, GetWorld()->GetDeltaSeconds(), true, 0.0f);
+	}
+	else {
+		GetWorld()->GetTimerManager().SetTimer(RecoverStaminaTimerHandle, this, &UCustomCharacterMovementComponent::RecoverStamina, GetWorld()->GetDeltaSeconds(), true, 0.0f);
+	}
 }
 
 void UCustomCharacterMovementComponent::SetOrientationToMovement(bool orientation)

@@ -343,7 +343,7 @@ void UTargetLockComponent::ChangeTargetActor(AActor* newTarget)
 		UCustomCharacterMovementComponent* customMovement = Cast<UCustomCharacterMovementComponent>(playerCharacter->GetCharacterMovement());
 		if (customMovement)
 		{
-			customMovement->SetOrientationToMovement(false);
+			customMovement->SetOrientationToMovement(customMovement->IsSprinting());
 		}
 	}
 	else

@@ -139,6 +139,8 @@ float AEnemyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 				Death();
 			}
 		}
+		// Event On Damage Taken broadcast
+		OnDamageTaken.Broadcast();
 	}
 
 	return DamageAmount;
